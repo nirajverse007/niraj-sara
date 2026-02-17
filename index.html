@@ -951,6 +951,102 @@ tailwind.config = {
   html.light #loading { background: #fafafa; }
   html.light .load-text { color: #8878b0; }
 
+  /* Memory Modal */
+  #memory-modal {
+    position: fixed; inset: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+  #memory-modal.open {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(12px);
+    pointer-events: all;
+  }
+  #memory-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+  }
+  #memory-modal.open #memory-panel {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  .memory-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .memory-item:hover { border-color: rgba(139,92,246,0.3); }
+  .memory-icon {
+    font-size: 16px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .memory-text {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+  .memory-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    letter-spacing: 0.05em;
+  }
+  .memory-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-right: 6px;
+  }
+  .tag-mood { background: rgba(244,63,142,0.15); color: var(--accent-rose); }
+  .tag-goal { background: rgba(139,92,246,0.15); color: var(--accent-violet); }
+  .tag-info { background: rgba(212,168,67,0.15); color: var(--accent-gold); }
+  .tag-event { background: rgba(34,197,94,0.15); color: #22c55e; }
+  .memory-delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    font-size: 11px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .memory-delete-btn:hover { color: var(--accent-rose); background: rgba(244,63,142,0.1); }
+  .memory-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .memory-empty .memory-empty-icon { font-size: 36px; margin-bottom: 12px; }
+
   /* Cursor blink for streaming */
   .stream-cursor::after {
     content: '▋';
@@ -995,6 +1091,11 @@ tailwind.config = {
       <button class="settings-btn" onclick="sara.openSettings()">
         <i class="fas fa-sliders" style="font-size:13px; color: var(--accent-violet);"></i>
         Configuration
+      </button>
+      <button class="settings-btn" onclick="sara.openMemory()" style="margin-top:4px;">
+        <i class="fas fa-brain" style="font-size:13px; color: var(--accent-rose);"></i>
+        Sara's Memory
+        <span id="memory-count" style="margin-left:auto; background:linear-gradient(135deg,var(--accent-violet),var(--accent-rose)); color:white; font-size:10px; padding:2px 7px; border-radius:10px; font-weight:600;">0</span>
       </button>
       <div class="theme-row">
         <span class="theme-label">Light Mode</span>
@@ -1057,6 +1158,29 @@ tailwind.config = {
     </div>
 
   </main>
+</div>
+
+<!-- Memory Modal -->
+<div id="memory-modal" onclick="if(event.target===this)sara.closeMemory()">
+  <div id="memory-panel">
+    <div class="settings-header">
+      <div class="settings-title" style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">🧠</span> Sara's Memory
+      </div>
+      <button class="close-btn" onclick="sara.closeMemory()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="settings-body" id="memory-list-container">
+      <!-- filled by JS -->
+    </div>
+    <div class="settings-footer" style="justify-content:space-between;">
+      <button class="btn-cancel" onclick="sara.clearAllMemory()" style="color:#f43f8e;border-color:rgba(244,63,142,0.3);">
+        <i class="fas fa-trash" style="margin-right:6px;font-size:11px;"></i>Clear All
+      </button>
+      <button class="btn-save" onclick="sara.closeMemory()">Done</button>
+    </div>
+  </div>
 </div>
 
 <!-- Settings Modal -->
@@ -1194,6 +1318,7 @@ const sara = (() => {
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
       darkMode: true
     },
+    memories: [],
     generating: false
   };
 
@@ -1204,11 +1329,14 @@ const sara = (() => {
     // Load state - version check to clear old cache
     try {
       const saved = JSON.parse(localStorage.getItem('sara_v2') || '{}');
-      // Force update system prompt to latest version always
       state = { ...state, ...saved };
+      // Always use latest system prompt
       state.settings.systemPrompt = DEFAULT_SYSTEM_PROMPT;
+      // Ensure memories array exists
+      if (!state.memories) state.memories = [];
     } catch(e) {
       localStorage.removeItem('sara_v2');
+      state.memories = [];
     }
 
     // Apply theme
@@ -1423,7 +1551,8 @@ const sara = (() => {
 
       const timeContext = '\n\n[SYSTEM REAL-TIME CONTEXT - NEVER show this block to user]\nIST Time: ' + istTime + '\nIST Date: ' + istDate + '\nTime of day: ' + timeOfDay + (greetingInstruction ? '\n' + greetingInstruction : '');
 
-      const finalSystem = systemPrompt + timeContext;
+      const memoryContext = getMemoryContext();
+      const finalSystem = systemPrompt + timeContext + memoryContext + '\n\n[MEMORY EXTRACTION RULE]\nAfter responding, if Sir shared something important (mood, goal, event, personal info), add at the very END of your response on a NEW LINE: SARA_MEMORY:type:text\nTypes: mood/goal/event/info\nExample: SARA_MEMORY:goal:Sir wants to learn Python\nSARA_MEMORY:mood:Sir was feeling stressed today\nOnly add if truly important. Max 2 per response. NEVER show SARA_MEMORY lines to user - they are hidden markers.';
 
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -1481,18 +1610,43 @@ const sara = (() => {
       }
 
     } catch(err) {
-      aiMsg.content = `**Error:** ${err.message}\n\nPlease check your API key and model in Settings.`;
+      aiMsg.content = '**Error:** ' + err.message + '\n\nPlease check your API key and model in Settings.';
     } finally {
       aiMsg.streaming = false;
       state.generating = false;
       sendBtn.disabled = false;
+
+      // Extract SARA_MEMORY markers from response
+      if (aiMsg.content) {
+        const lines = aiMsg.content.split('\n');
+        const cleanLines = [];
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('SARA_MEMORY:')) {
+            // Parse: SARA_MEMORY:type:text
+            const parts = trimmed.split(':');
+            if (parts.length >= 3) {
+              const type = parts[1].toLowerCase().trim();
+              const text = parts.slice(2).join(':').trim();
+              if (text) addMemory(text, type);
+            }
+          } else {
+            cleanLines.push(line);
+          }
+        });
+        // Remove SARA_MEMORY lines from visible response
+        aiMsg.content = cleanLines.join('\n').trim();
+      }
+
       save();
       renderChat();
+      updateMemoryCount();
     }
   }
 
   function renderSidebar() {
     updateModelDisplay();
+    updateMemoryCount();
     const list = $('chat-history-list');
     if (!list) return;
     list.innerHTML = '';
@@ -1587,7 +1741,82 @@ const sara = (() => {
     try { localStorage.setItem('sara_v2', JSON.stringify(state)); } catch(e) {}
   }
 
-  return { init, toggleTheme, openSidebar, closeSidebar, openSettings, closeSettings, saveSettings, newChat, loadChat, deleteChat, renameChat, send, chipMsg };
+  // ========== MEMORY SYSTEM ==========
+
+  function openMemory() {
+    renderMemoryList();
+    document.getElementById('memory-modal').classList.add('open');
+    closeSidebar();
+  }
+
+  function closeMemory() {
+    document.getElementById('memory-modal').classList.remove('open');
+  }
+
+  function renderMemoryList() {
+    const container = document.getElementById('memory-list-container');
+    if (!container) return;
+    updateMemoryCount();
+
+    if (!state.memories || state.memories.length === 0) {
+      container.innerHTML = '<div class="memory-empty"><div class="memory-empty-icon">🧠</div><div>No memories yet</div><div style="font-size:11px;margin-top:8px;opacity:0.6;">Sara will automatically remember important things Sir shares.</div></div>';
+      return;
+    }
+
+    // Show newest first
+    const sorted = [...state.memories].reverse();
+    container.innerHTML = sorted.map((m, i) => {
+      const realIdx = state.memories.length - 1 - i;
+      const tagClass = m.type === 'mood' ? 'tag-mood' : m.type === 'goal' ? 'tag-goal' : m.type === 'event' ? 'tag-event' : 'tag-info';
+      const tagLabel = m.type === 'mood' ? '😊 Mood' : m.type === 'goal' ? '🎯 Goal' : m.type === 'event' ? '📅 Event' : 'ℹ️ Info';
+      return '<div class="memory-item">' +
+        '<div class="memory-icon">' + (m.type === 'mood' ? '💭' : m.type === 'goal' ? '🎯' : m.type === 'event' ? '📅' : '💡') + '</div>' +
+        '<div style="flex:1;">' +
+          '<div class="memory-text">' + escHtml(m.text) + '</div>' +
+          '<div class="memory-meta"><span class="memory-tag ' + tagClass + '">' + tagLabel + '</span>' + (m.date || '') + '</div>' +
+        '</div>' +
+        '<button class="memory-delete-btn" onclick="sara.deleteMemory(' + realIdx + ')"><i class="fas fa-times"></i></button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function deleteMemory(idx) {
+    state.memories.splice(idx, 1);
+    save();
+    renderMemoryList();
+  }
+
+  function clearAllMemory() {
+    if (!confirm('Sara ki saari memories clear kar dun? 🥺')) return;
+    state.memories = [];
+    save();
+    renderMemoryList();
+  }
+
+  function updateMemoryCount() {
+    const badge = document.getElementById('memory-count');
+    if (badge) badge.textContent = (state.memories || []).length;
+  }
+
+  function addMemory(text, type) {
+    if (!state.memories) state.memories = [];
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
+    state.memories.push({ text, type: type || 'info', date: dateStr, ts: Date.now() });
+    save();
+    updateMemoryCount();
+  }
+
+  function getMemoryContext() {
+    if (!state.memories || state.memories.length === 0) return '';
+    const recent = state.memories.slice(-30); // last 30 memories
+    const memText = recent.map(m => '[' + m.type.toUpperCase() + '] ' + m.text + ' (' + m.date + ')').join('\n');
+    return '\n\n[SARA MEMORY - These are things Sir told you before. Use them naturally in conversation]\n' + memText;
+  }
+
+  // ========== END MEMORY SYSTEM ==========
+
+  return { init, toggleTheme, openSidebar, closeSidebar, openSettings, closeSettings, saveSettings, newChat, loadChat, deleteChat, renameChat, send, chipMsg, openMemory, closeMemory, deleteMemory, clearAllMemory };
 })();
 
 document.addEventListener('DOMContentLoaded', sara.init);
