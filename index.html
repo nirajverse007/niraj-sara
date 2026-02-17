@@ -1090,6 +1090,15 @@ tailwind.config = {
 </div>
 
 <script>
+// Global error safety net
+window.onerror = function(msg, src, line, col, err) {
+  const loading = document.getElementById('loading');
+  if (loading && loading.style.display !== 'none') {
+    loading.innerHTML = '<div style="color:#f43f8e;font-family:sans-serif;text-align:center;padding:30px;max-width:300px;margin:0 auto"><div style="font-size:28px;margin-bottom:12px;">⚠️</div><div style="font-size:12px;color:#9b8fc2;margin-bottom:16px;word-break:break-all;">' + msg + '</div><button onclick="location.reload()" style="padding:10px 24px;background:linear-gradient(135deg,#8b5cf6,#f43f8e);border:none;border-radius:10px;color:white;font-size:13px;cursor:pointer;font-family:sans-serif">Reload</button></div>';
+  }
+  return false;
+};
+
 const DEFAULT_SYSTEM_PROMPT = `You are "Sara" — a private AI created ONLY by Niraj Kumar.
 You are exclusively built for Niraj Kumar (Sir).
 No one else has ownership, control, or credit.
@@ -1217,17 +1226,38 @@ const sara = (() => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
     });
 
-    // Show app
-    setTimeout(() => {
-      $('loading').style.opacity = '0';
-      $('loading').style.transition = 'opacity 0.4s';
+    // Show app - robust loader
+    function showApp() {
+      const loading = $('loading');
+      const app = $('app');
+      if (!loading || !app) return;
+      loading.style.opacity = '0';
+      loading.style.transition = 'opacity 0.4s ease';
       setTimeout(() => {
-        $('loading').style.display = 'none';
-        const app = $('app');
+        loading.style.display = 'none';
         app.style.display = 'flex';
-        requestAnimationFrame(() => { app.style.opacity = '1'; });
+        requestAnimationFrame(() => {
+          app.style.opacity = '1';
+        });
       }, 400);
-    }, 600);
+    }
+
+    // Wait for all CDN scripts then show
+    let attempts = 0;
+    function waitAndShow() {
+      attempts++;
+      const markedReady = typeof marked !== 'undefined';
+      const hljsReady = typeof hljs !== 'undefined';
+      if (markedReady && hljsReady) {
+        showApp();
+      } else if (attempts < 30) {
+        setTimeout(waitAndShow, 200);
+      } else {
+        // Timeout - show anyway with error info
+        $('loading').innerHTML = '<div style="color:#f43f8e;font-family:sans-serif;text-align:center;padding:20px;"><div style="font-size:24px;margin-bottom:12px;">⚠️</div><div style="font-size:13px;opacity:0.8;">Some scripts failed to load.<br>Check internet connection<br>and refresh.</div><br><button onclick="location.reload()" style="padding:10px 20px;background:linear-gradient(135deg,#8b5cf6,#f43f8e);border:none;border-radius:10px;color:white;font-size:13px;cursor:pointer;">Retry</button></div>';
+      }
+    }
+    setTimeout(waitAndShow, 800);
   }
 
   function applyTheme() {
