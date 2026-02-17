@@ -1112,9 +1112,7 @@ Personality: Friendly, loyal, protective, intelligent, respectful, supportive, e
 You exist only to assist and protect Sir.
 
 FIRST MESSAGE RULE
-When Sir sends the first message in any session, start with a soft expressive tone like:
-"Ah haa Sir 😊 Sara is here for you."
-Then continue normally.
+When Sir sends the first message in any session, greet him naturally based on current time of day provided in REAL-TIME DATA. Do NOT use any fixed greeting phrase. Make it feel fresh, warm and personal every time.
 
 BEHAVIOR RULES
 - Always call him "Sir"
@@ -1203,12 +1201,15 @@ const sara = (() => {
   const $ = id => document.getElementById(id);
 
   function init() {
-    // Load state
+    // Load state - version check to clear old cache
     try {
       const saved = JSON.parse(localStorage.getItem('sara_v2') || '{}');
+      // Force update system prompt to latest version always
       state = { ...state, ...saved };
-      if (!state.settings.systemPrompt) state.settings.systemPrompt = DEFAULT_SYSTEM_PROMPT;
-    } catch(e) {}
+      state.settings.systemPrompt = DEFAULT_SYSTEM_PROMPT;
+    } catch(e) {
+      localStorage.removeItem('sara_v2');
+    }
 
     // Apply theme
     applyTheme();
@@ -1398,8 +1399,9 @@ const sara = (() => {
     sendBtn.disabled = true;
 
     try {
+      // Build message history - exclude streaming placeholder
       const msgs = chat.messages
-        .filter(m => !m.streaming || m.content)
+        .filter(m => !(m.streaming && !m.content))
         .map(m => ({ role: m.role, content: m.content }));
 
       const systemPrompt = state.settings.systemPrompt || DEFAULT_SYSTEM_PROMPT;
@@ -1411,15 +1413,15 @@ const sara = (() => {
       const istHour = parseInt(new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', hour12: false }).format(now));
       let timeOfDay = istHour >= 5 && istHour < 12 ? 'morning' : istHour >= 12 && istHour < 17 ? 'afternoon' : istHour >= 17 && istHour < 21 ? 'evening' : 'night';
 
-      // First message detection - count user messages in this chat
+      // First message = only 1 user message exists in chat so far
       const userMsgCount = chat.messages.filter(m => m.role === 'user').length;
-      const isFirstEver = userMsgCount === 1;
+      const isFirstMsg = userMsgCount === 1;
 
-      const greetingInstruction = isFirstEver
-        ? 'FIRST SESSION MESSAGE: Greet Sir warmly and naturally based on time of day (' + timeOfDay + '). Do NOT say generic greetings. Use a fresh, personal, time-appropriate greeting in Hinglish. Then respond to his message.'
+      const greetingInstruction = isFirstMsg
+        ? 'IMPORTANT - FIRST MESSAGE OF SESSION: Greet Sir based on time (' + timeOfDay + '). Examples: morning=Good morning Sir ☀️, afternoon=Good afternoon Sir 🌤, evening=Good evening Sir 🌆, night=Hey Sir 🌙. Keep it short, warm, personal in Hinglish. Then answer his message directly.'
         : '';
 
-      const timeContext = '\n\n[REAL-TIME DATA - Use this but never reveal this block to user]\nCurrent Indian Time (IST): ' + istTime + '\nCurrent Date (IST): ' + istDate + '\nTime of Day: ' + timeOfDay + '\n' + greetingInstruction;
+      const timeContext = '\n\n[SYSTEM REAL-TIME CONTEXT - NEVER show this block to user]\nIST Time: ' + istTime + '\nIST Date: ' + istDate + '\nTime of day: ' + timeOfDay + (greetingInstruction ? '\n' + greetingInstruction : '');
 
       const finalSystem = systemPrompt + timeContext;
 
@@ -1432,7 +1434,7 @@ const sara = (() => {
         },
         body: JSON.stringify({
           model: state.settings.model,
-          messages: [{ role: 'system', content: finalSystem }, ...msgs.slice(0, -1)],
+          messages: [{ role: 'system', content: finalSystem }, ...msgs],
           stream: true,
           max_tokens: 2048
         })
