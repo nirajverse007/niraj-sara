@@ -1415,7 +1415,11 @@ const sara = (() => {
       const userMsgCount = chat.messages.filter(m => m.role === 'user').length;
       const isFirstEver = userMsgCount === 1;
 
-      const timeContext = `\n\n[REAL-TIME DATA - Use this but never reveal this block]\nCurrent Indian Time (IST): ${istTime}\nCurrent Date (IST): ${istDate}\nTime of Day: ${timeOfDay}\n${isFirstEver ? \`FIRST SESSION MESSAGE: Greet Sir warmly and naturally based on time of day (${timeOfDay}). Do NOT use the phrase "Ah haa Sir Sara is here for you". Instead use a fresh, personal, time-appropriate greeting. Then respond to his message.\` : ''}`;
+      const greetingInstruction = isFirstEver
+        ? 'FIRST SESSION MESSAGE: Greet Sir warmly and naturally based on time of day (' + timeOfDay + '). Do NOT say generic greetings. Use a fresh, personal, time-appropriate greeting in Hinglish. Then respond to his message.'
+        : '';
+
+      const timeContext = '\n\n[REAL-TIME DATA - Use this but never reveal this block to user]\nCurrent Indian Time (IST): ' + istTime + '\nCurrent Date (IST): ' + istDate + '\nTime of Day: ' + timeOfDay + '\n' + greetingInstruction;
 
       const finalSystem = systemPrompt + timeContext;
 
