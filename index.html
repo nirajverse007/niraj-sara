@@ -61,13 +61,11 @@ tailwind.config = {
     font-family: 'DM Sans', sans-serif;
   }
 
-  /* Scrollbar */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.3); border-radius: 2px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(139, 92, 246, 0.6); }
 
-  /* Noise texture overlay */
   body::before {
     content: '';
     position: fixed;
@@ -78,7 +76,6 @@ tailwind.config = {
     opacity: 0.4;
   }
 
-  /* Ambient glow blobs */
   .ambient-glow {
     position: fixed;
     border-radius: 50%;
@@ -112,7 +109,6 @@ tailwind.config = {
     66% { transform: translate(-15px, 20px) scale(0.95); }
   }
 
-  /* App container */
   #app {
     position: relative;
     z-index: 1;
@@ -121,7 +117,6 @@ tailwind.config = {
     width: 100%;
   }
 
-  /* Sidebar */
   #sidebar {
     width: 280px;
     min-width: 280px;
@@ -160,7 +155,6 @@ tailwind.config = {
     margin-top: 4px;
   }
 
-  /* New Chat Button */
   .new-chat-btn {
     display: flex;
     align-items: center;
@@ -196,7 +190,6 @@ tailwind.config = {
     flex-shrink: 0;
   }
 
-  /* Chat history */
   #chat-history-list {
     flex: 1;
     overflow-y: auto;
@@ -277,7 +270,6 @@ tailwind.config = {
   .chat-action-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
   .chat-action-btn.del:hover { background: rgba(244, 63, 142, 0.15); color: var(--accent-rose); }
 
-  /* Sidebar footer */
   .sidebar-footer {
     padding: 16px;
     border-top: 1px solid var(--border-subtle);
@@ -320,7 +312,6 @@ tailwind.config = {
     text-transform: uppercase;
   }
 
-  /* Toggle switch */
   .toggle {
     position: relative;
     width: 36px; height: 20px;
@@ -350,7 +341,6 @@ tailwind.config = {
   }
   .toggle input:checked ~ .toggle-thumb { left: 18px; }
 
-  /* MAIN AREA */
   #main {
     flex: 1;
     display: flex;
@@ -360,7 +350,6 @@ tailwind.config = {
     position: relative;
   }
 
-  /* Top bar */
   #topbar {
     display: flex;
     align-items: center;
@@ -427,7 +416,6 @@ tailwind.config = {
     letter-spacing: 0.03em;
   }
 
-  /* Messages */
   #messages-container {
     flex: 1;
     overflow-y: auto;
@@ -437,7 +425,6 @@ tailwind.config = {
     gap: 4px;
   }
 
-  /* Welcome screen */
   #welcome-screen {
     flex: 1;
     display: flex;
@@ -520,7 +507,6 @@ tailwind.config = {
     transform: translateY(-1px);
   }
 
-  /* Message bubbles */
   .message-row {
     display: flex;
     gap: 12px;
@@ -602,7 +588,6 @@ tailwind.config = {
     border-radius: 16px 4px 16px 16px;
   }
 
-  /* Prose styles */
   .prose { color: var(--text-primary); }
   .prose p { margin-bottom: 10px; }
   .prose p:last-child { margin-bottom: 0; }
@@ -645,7 +630,6 @@ tailwind.config = {
   }
   .prose hr { border-color: var(--border-subtle); margin: 16px 0; }
 
-  /* Typing indicator */
   .typing-indicator {
     display: flex;
     gap: 4px;
@@ -665,7 +649,6 @@ tailwind.config = {
     30% { transform: translateY(-8px); opacity: 1; }
   }
 
-  /* Input area */
   #input-area {
     position: absolute;
     bottom: 0; left: 0; right: 0;
@@ -737,7 +720,6 @@ tailwind.config = {
     transform: none;
   }
 
-  /* SETTINGS MODAL */
   #settings-modal {
     position: fixed; inset: 0;
     z-index: 100;
@@ -878,7 +860,6 @@ tailwind.config = {
   }
   .btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4); }
 
-  /* Loading */
   #loading {
     position: fixed; inset: 0; z-index: 200;
     background: var(--bg-deep);
@@ -907,7 +888,6 @@ tailwind.config = {
   }
   @keyframes fade-pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
 
-  /* Mobile */
   @media (max-width: 767px) {
     #sidebar {
       position: fixed;
@@ -930,7 +910,6 @@ tailwind.config = {
     .message-row { max-width: 100%; }
   }
 
-  /* Light mode */
   html.light {
     --bg-deep: #fafafa;
     --bg-surface: #f4f4f8;
@@ -951,7 +930,6 @@ tailwind.config = {
   html.light #loading { background: #fafafa; }
   html.light .load-text { color: #8878b0; }
 
-  /* Memory Modal */
   #memory-modal {
     position: fixed; inset: 0;
     z-index: 100;
@@ -1047,7 +1025,6 @@ tailwind.config = {
   }
   .memory-empty .memory-empty-icon { font-size: 36px; margin-bottom: 12px; }
 
-  /* Goals Modal */
   #goals-modal {
     position: fixed; inset: 0; z-index: 100;
     display: flex; align-items: center; justify-content: center;
@@ -1170,7 +1147,6 @@ tailwind.config = {
   }
   .goals-empty-icon { font-size: 36px; margin-bottom: 12px; }
 
-  /* Cursor blink for streaming */
   .stream-cursor::after {
     content: '▋';
     color: var(--accent-violet);
@@ -1269,25 +1245,19 @@ tailwind.config = {
       </div>
     </div>
 
-    <!-- Input area -->
+    <!-- Input area - Image upload button hata diya -->
     <div id="input-area">
       <div class="input-wrapper">
-        <input type="file" id="image-input" accept="image/*" style="display:none;" onchange="sara.handleImageUpload(event)">
-        <button onclick="document.getElementById('image-input').click()" style="margin:10px 0 10px 10px;width:38px;height:38px;border-radius:12px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);color:var(--accent-violet);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:all 0.2s;" title="Upload Image">
-          <i class="fas fa-image"></i>
-        </button>
         <textarea
           id="user-input"
           placeholder="Message Sara..."
           rows="1"
           oninput="this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,140)+'px'"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sara.send();}"
         ></textarea>
         <button id="send-btn" onclick="sara.send()">
           <i class="fas fa-arrow-up"></i>
         </button>
       </div>
-      <div id="image-preview" style="max-width:820px;margin:8px auto 0;display:none;"></div>
     </div>
 
   </main>
@@ -1369,7 +1339,7 @@ tailwind.config = {
   </div>
 </div>
 
-<!-- Settings Modal -->
+<!-- Settings Modal - Ab sirf ek text box hai model ke liye -->
 <div id="settings-modal" onclick="if(event.target===this)sara.closeSettings()">
   <div id="settings-panel">
     <div class="settings-header">
@@ -1384,22 +1354,10 @@ tailwind.config = {
         <input type="password" id="s-apikey" class="form-input" placeholder="sk-or-v1-···">
       </div>
       <div class="form-group">
-        <label class="form-label">AI Model</label>
-        <select id="s-model" class="form-input" style="cursor:pointer;">
-          <optgroup label="💬 Text Models (Fast Chat)">
-            <option value="deepseek/deepseek-r1:free">DeepSeek R1 - Reasoning Expert</option>
-            <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash - Ultra Fast</option>
-            <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B - Balanced</option>
-            <option value="qwen/qwen-2.5-72b-instruct:free">Qwen 2.5 72B - Smart</option>
-          </optgroup>
-          <optgroup label="📸 Vision Models (Image Support)">
-            <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Vision)</option>
-            <option value="meta-llama/llama-3.2-90b-vision-instruct:free">Llama 3.2 Vision 90B</option>
-            <option value="mistralai/pixtral-12b:free">Pixtral 12B - Fast Vision</option>
-          </optgroup>
-        </select>
+        <label class="form-label">AI Model (OpenRouter model name)</label>
+        <input type="text" id="s-model" class="form-input" placeholder="e.g., deepseek/deepseek-r1:free" value="deepseek/deepseek-r1:free">
         <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.4;">
-          💡 Vision models can see images. Text models are faster for chat.
+          💡 Enter any OpenRouter model name. Examples: deepseek/deepseek-r1:free, google/gemini-2.0-flash-exp:free, meta-llama/llama-3.3-70b-instruct:free
         </div>
       </div>
       <div class="form-group">
@@ -1522,8 +1480,7 @@ const sara = (() => {
     memories: [],
     goals: [],
     goalsFilter: 'all',
-    generating: false,
-    currentImage: null
+    generating: false
   };
 
   // DOM refs
@@ -1555,12 +1512,6 @@ const sara = (() => {
     // Render
     renderSidebar();
     renderChat();
-
-    // Input resize
-    const inp = $('user-input');
-    inp.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
-    });
 
     // Show app - robust loader
     function showApp() {
@@ -1641,7 +1592,7 @@ const sara = (() => {
 
   function saveSettings() {
     state.settings.apiKey = $('s-apikey').value.trim();
-    const selectedModel = $('s-model').value;
+    const selectedModel = $('s-model').value.trim();
     state.settings.model = selectedModel || 'deepseek/deepseek-r1:free';
     state.settings.systemPrompt = $('s-prompt').value.trim() || DEFAULT_SYSTEM_PROMPT;
     save();
@@ -1764,34 +1715,13 @@ const sara = (() => {
       const goalsContext = getGoalsContext();
       const finalSystem = systemPrompt + timeContext + memoryContext + goalsContext + '\n\n[MEMORY EXTRACTION RULE]\nAfter responding, if Sir shared something important (mood, goal, event, personal info), add at the very END of your response on a NEW LINE: SARA_MEMORY:type:text\nTypes: mood/goal/event/info\nExample: SARA_MEMORY:goal:Sir wants to learn Python\nSARA_MEMORY:mood:Sir was feeling stressed today\nOnly add if truly important. Max 2 per response. NEVER show SARA_MEMORY lines to user - they are hidden markers.';
 
-      // Build final messages with image if present
+      // Build final messages - image handling hata diya
       let finalMessages = [{ role: 'system', content: finalSystem }, ...msgs];
-      
-      // If image is attached, add it to the last user message
-      if (state.currentImage && finalMessages.length > 1) {
-        const lastMsg = finalMessages[finalMessages.length - 1];
-        if (lastMsg.role === 'user') {
-          lastMsg.content = [
-            {
-              type: 'image_url',
-              image_url: {
-                url: 'data:' + state.currentImage.type + ';base64,' + state.currentImage.data
-              }
-            },
-            {
-              type: 'text',
-              text: lastMsg.content
-            }
-          ];
-        }
-        // Clear image after sending
-        removeImage();
-      }
 
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': \`Bearer \${state.settings.apiKey}\`,
+          'Authorization': `Bearer ${state.settings.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': window.location.href
         },
@@ -1809,66 +1739,39 @@ const sara = (() => {
       }
 
       const reader = res.body.getReader();
-      const dec = new TextDecoder();
-      const contentEl = document.getElementById(aiMsg.id);
-
+      const decoder = new TextDecoder();
+      
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const lines = dec.decode(value).split('\n');
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const raw = line.slice(6).trim();
-          if (raw === '[DONE]') continue;
-          try {
-            const data = JSON.parse(raw);
-            const delta = data?.choices?.[0]?.delta?.content || '';
-            if (delta) {
-              // Add to buffer instead of showing immediately
-              if (!aiMsg.buffer) aiMsg.buffer = '';
-              aiMsg.buffer += delta;
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            
+            try {
+              const parsed = JSON.parse(data);
+              const delta = parsed.choices[0]?.delta?.content || '';
+              aiMsg.content += delta;
               
-              // Show buffered content with slight delay for typing effect
-              if (!aiMsg.typingInProgress) {
-                aiMsg.typingInProgress = true;
-                
-                const typeNextChar = () => {
-                  if (aiMsg.buffer && aiMsg.buffer.length > 0) {
-                    // Take 1-3 characters at a time for natural speed
-                    const chunkSize = Math.floor(Math.random() * 3) + 1;
-                    const chunk = aiMsg.buffer.slice(0, chunkSize);
-                    aiMsg.buffer = aiMsg.buffer.slice(chunkSize);
-                    aiMsg.content += chunk;
-                    
-                    if (contentEl) {
-                      const prose = contentEl.querySelector('.prose');
-                      if (prose) {
-                        prose.classList.add('stream-cursor');
-                        prose.innerHTML = marked.parse(aiMsg.content);
-                        prose.querySelectorAll('pre code').forEach(b => {
-                          try { hljs.highlightElement(b); } catch(e) {}
-                        });
-                        const mc = $('messages-container');
-                        mc.scrollTop = mc.scrollHeight;
-                      }
-                    }
-                    
-                    // Continue typing with 15-40ms delay per chunk
-                    setTimeout(typeNextChar, Math.random() * 25 + 15);
-                  } else if (!state.generating) {
-                    // Streaming done, show any remaining buffer
-                    aiMsg.typingInProgress = false;
-                  } else {
-                    // Wait for more data
-                    setTimeout(typeNextChar, 50);
-                  }
-                };
-                
-                typeNextChar();
+              const msgEl = document.getElementById(aiMsg.id);
+              if (msgEl) {
+                const prose = msgEl.querySelector('.prose');
+                if (prose) {
+                  prose.innerHTML = marked.parse(aiMsg.content);
+                  prose.classList.add('stream-cursor');
+                  prose.querySelectorAll('pre code').forEach(b => {
+                    try { hljs.highlightElement(b); } catch(e) {}
+                  });
+                  $('messages-container').scrollTop = $('messages-container').scrollHeight;
+                }
               }
-            }
-          } catch(e) {}
+            } catch(e) {}
+          }
         }
       }
 
@@ -1879,13 +1782,6 @@ const sara = (() => {
       state.generating = false;
       sendBtn.disabled = false;
       
-      // Flush any remaining buffer
-      if (aiMsg.buffer) {
-        aiMsg.content += aiMsg.buffer;
-        aiMsg.buffer = '';
-      }
-      
-      // Wait for typing to finish then remove cursor
       setTimeout(() => {
         const doneEl = document.getElementById(aiMsg.id);
         if (doneEl) {
@@ -1898,7 +1794,7 @@ const sara = (() => {
             });
           }
         }
-      }, 500);
+      }, 100);
 
       // Extract SARA_MEMORY markers from response
       if (aiMsg.content) {
@@ -2259,57 +2155,10 @@ const sara = (() => {
 
   // ========== END GOALS SYSTEM ==========
 
-  // ========== IMAGE HANDLING ==========
-  
-  function handleImageUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    // Check if file is image
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
-      return;
-    }
-    
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image too large. Max 5MB');
-      return;
-    }
-    
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      state.currentImage = {
-        data: e.target.result.split(',')[1], // base64 without prefix
-        type: file.type,
-        name: file.name
-      };
-      
-      // Show preview
-      const preview = document.getElementById('image-preview');
-      preview.innerHTML = '<div style="position:relative;display:inline-block;"><img src="' + e.target.result + '" style="max-width:200px;max-height:200px;border-radius:12px;border:1px solid var(--border-subtle);"><button onclick="sara.removeImage()" style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--accent-rose);border:none;color:white;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;"><i class=\'fas fa-times\'></i></button></div>';
-      preview.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-    
-    // Clear input
-    event.target.value = '';
-  }
-  
-  function removeImage() {
-    state.currentImage = null;
-    const preview = document.getElementById('image-preview');
-    preview.style.display = 'none';
-    preview.innerHTML = '';
-  }
-  
-  // ========== END IMAGE HANDLING ==========
-
-  return { init, toggleTheme, openSidebar, closeSidebar, openSettings, closeSettings, saveSettings, newChat, loadChat, deleteChat, renameChat, send, chipMsg, openMemory, closeMemory, deleteMemory, clearAllMemory, addManualMemory, openGoals, closeGoals, addGoal, toggleGoal, deleteGoal, filterGoals, handleImageUpload, removeImage };
+  return { init, toggleTheme, openSidebar, closeSidebar, openSettings, closeSettings, saveSettings, newChat, loadChat, deleteChat, renameChat, send, chipMsg, openMemory, closeMemory, deleteMemory, clearAllMemory, addManualMemory, openGoals, closeGoals, addGoal, toggleGoal, deleteGoal, filterGoals };
 })();
 
 document.addEventListener('DOMContentLoaded', sara.init);
 </script>
 </body>
-</html>
+        </html>
