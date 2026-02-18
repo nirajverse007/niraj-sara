@@ -1557,22 +1557,23 @@ const sara = (() => {
       }, 400);
     }
 
-    // Wait for all CDN scripts then show
+    // Aggressive loader - show app ASAP
     let attempts = 0;
     function waitAndShow() {
       attempts++;
       const markedReady = typeof marked !== 'undefined';
       const hljsReady = typeof hljs !== 'undefined';
-      if (markedReady && hljsReady) {
+      
+      // Show app if scripts ready OR after 10 attempts (2 seconds)
+      if ((markedReady && hljsReady) || attempts >= 10) {
         showApp();
-      } else if (attempts < 20) {
-        setTimeout(waitAndShow, 200);
       } else {
-        // Timeout - show anyway with error info
-        $('loading').innerHTML = '<div style="color:#f43f8e;font-family:sans-serif;text-align:center;padding:20px;"><div style="font-size:24px;margin-bottom:12px;">⚠️</div><div style="font-size:13px;opacity:0.8;">Some scripts failed to load.<br>Check internet connection<br>and refresh.</div><br><button onclick="location.reload()" style="padding:10px 20px;background:linear-gradient(135deg,#8b5cf6,#f43f8e);border:none;border-radius:10px;color:white;font-size:13px;cursor:pointer;">Retry</button></div>';
+        setTimeout(waitAndShow, 200);
       }
     }
-    setTimeout(waitAndShow, 100); // Start checking sooner
+    
+    // Start checking immediately
+    waitAndShow();
   }
 
   function applyTheme() {
