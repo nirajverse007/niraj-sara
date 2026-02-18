@@ -1558,6 +1558,11 @@ const sara = (() => {
 
   function init() {
     try {
+      // Migrate old sara_v2 data if sara_v3 doesn't exist yet
+      if (!localStorage.getItem('sara_v3') && localStorage.getItem('sara_v2')) {
+        const oldData = JSON.parse(localStorage.getItem('sara_v2') || '{}');
+        localStorage.setItem('sara_v3', JSON.stringify(oldData));
+      }
       const saved = JSON.parse(localStorage.getItem('sara_v3') || '{}');
       state = { ...state, ...saved };
       state.settings.systemPrompt = DEFAULT_SYSTEM_PROMPT;
