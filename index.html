@@ -1779,20 +1779,47 @@ const sara = (() => {
             const data = JSON.parse(raw);
             const delta = data?.choices?.[0]?.delta?.content || '';
             if (delta) {
-              aiMsg.content += delta;
-              if (contentEl) {
-                const prose = contentEl.querySelector('.prose');
-                if (prose) {
-                  // Add typing cursor during stream
-                  prose.classList.add('stream-cursor');
-                  prose.innerHTML = marked.parse(aiMsg.content);
-                  prose.querySelectorAll('pre code').forEach(b => {
-                    try { hljs.highlightElement(b); } catch(e) {}
-                  });
-                  // Scroll
-                  const mc = $('messages-container');
-                  mc.scrollTop = mc.scrollHeight;
-                }
+              // Add to buffer instead of showing immediately
+              if (!aiMsg.buffer) aiMsg.buffer = '';
+              aiMsg.buffer += delta;
+              
+              // Show buffered content with slight delay for typing effect
+              if (!aiMsg.typingInProgress) {
+                aiMsg.typingInProgress = true;
+                
+                const typeNextChar = () => {
+                  if (aiMsg.buffer && aiMsg.buffer.length > 0) {
+                    // Take 1-3 characters at a time for natural speed
+                    const chunkSize = Math.floor(Math.random() * 3) + 1;
+                    const chunk = aiMsg.buffer.slice(0, chunkSize);
+                    aiMsg.buffer = aiMsg.buffer.slice(chunkSize);
+                    aiMsg.content += chunk;
+                    
+                    if (contentEl) {
+                      const prose = contentEl.querySelector('.prose');
+                      if (prose) {
+                        prose.classList.add('stream-cursor');
+                        prose.innerHTML = marked.parse(aiMsg.content);
+                        prose.querySelectorAll('pre code').forEach(b => {
+                          try { hljs.highlightElement(b); } catch(e) {}
+                        });
+                        const mc = $('messages-container');
+                        mc.scrollTop = mc.scrollHeight;
+                      }
+                    }
+                    
+                    // Continue typing with 15-40ms delay per chunk
+                    setTimeout(typeNextChar, Math.random() * 25 + 15);
+                  } else if (!state.generating) {
+                    // Streaming done, show any remaining buffer
+                    aiMsg.typingInProgress = false;
+                  } else {
+                    // Wait for more data
+                    setTimeout(typeNextChar, 50);
+                  }
+                };
+                
+                typeNextChar();
               }
             }
           } catch(e) {}
@@ -1806,12 +1833,26 @@ const sara = (() => {
       state.generating = false;
       sendBtn.disabled = false;
       
-      // Remove typing cursor when done
-      const doneEl = document.getElementById(aiMsg.id);
-      if (doneEl) {
-        const prose = doneEl.querySelector('.prose');
-        if (prose) prose.classList.remove('stream-cursor');
+      // Flush any remaining buffer
+      if (aiMsg.buffer) {
+        aiMsg.content += aiMsg.buffer;
+        aiMsg.buffer = '';
       }
+      
+      // Wait for typing to finish then remove cursor
+      setTimeout(() => {
+        const doneEl = document.getElementById(aiMsg.id);
+        if (doneEl) {
+          const prose = doneEl.querySelector('.prose');
+          if (prose) {
+            prose.classList.remove('stream-cursor');
+            prose.innerHTML = marked.parse(aiMsg.content);
+            prose.querySelectorAll('pre code').forEach(b => {
+              try { hljs.highlightElement(b); } catch(e) {}
+            });
+          }
+        }
+      }, 500);
 
       // Extract SARA_MEMORY markers from response
       if (aiMsg.content) {
@@ -2132,19 +2173,16 @@ const sara = (() => {
     }
 
     const sorted = [...filtered].reverse();
-        container.innerHTML = sorted.map(g => {
+    container.innerHTML = sorted.map(g => {
       return '<div class="goal-item' + (g.completed ? ' completed' : '') + '">' +
-        // Corrected line below:
-        '<div class="goal-checkbox' + (g.completed ? ' checked' : '') + '" onclick="sara.toggleGoal(\'' + g.id + '\')"></div>' +
+        '<div class="goal-checkbox' + (g.completed ? ' checked' : '') + '" onclick="sara.toggleGoal('' + g.id + '')"></div>' +
         '<div style="flex:1;">' +
           '<div class="goal-text">' + escHtml(g.text) + '</div>' +
           '<div class="goal-date">' + g.date + '</div>' +
         '</div>' +
-        // Corrected line below:
-        '<button class="goal-delete" onclick="sara.deleteGoal(\'' + g.id + '\')"><i class="fas fa-times"></i></button>' +
+        '<button class="goal-delete" onclick="sara.deleteGoal('' + g.id + '')"><i class="fas fa-times"></i></button>' +
       '</div>';
     }).join('');
-
     
     updateGoalsStats();
   }
