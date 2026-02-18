@@ -2123,16 +2123,19 @@ const sara = (() => {
     }
 
     const sorted = [...filtered].reverse();
-    container.innerHTML = sorted.map(g => {
+        container.innerHTML = sorted.map(g => {
       return '<div class="goal-item' + (g.completed ? ' completed' : '') + '">' +
-        '<div class="goal-checkbox' + (g.completed ? ' checked' : '') + '" onclick="sara.toggleGoal('' + g.id + '')"></div>' +
+        // FIX 1: Niche wali line me \' lagaya hai taaki ID string me pass ho
+        '<div class="goal-checkbox' + (g.completed ? ' checked' : '') + '" onclick="sara.toggleGoal(\'' + g.id + '\')"></div>' +
         '<div style="flex:1;">' +
           '<div class="goal-text">' + escHtml(g.text) + '</div>' +
           '<div class="goal-date">' + g.date + '</div>' +
         '</div>' +
-        '<button class="goal-delete" onclick="sara.deleteGoal('' + g.id + '')"><i class="fas fa-times"></i></button>' +
+        // FIX 2: Delete button me bhi same fix
+        '<button class="goal-delete" onclick="sara.deleteGoal(\'' + g.id + '\')"><i class="fas fa-times"></i></button>' +
       '</div>';
     }).join('');
+
     
     updateGoalsStats();
   }
