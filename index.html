@@ -1733,8 +1733,8 @@ const sara = (() => {
       const isFirstMsg = userMsgCount === 1;
 
       const greetingInstruction = isFirstMsg
-        ? 'IMPORTANT - FIRST MESSAGE OF SESSION: Greet Sir based on time (' + timeOfDay + '). Examples: morning=Good morning Sir ☀️, afternoon=Good afternoon Sir 🌤, evening=Good evening Sir 🌆, night=Hey Sir 🌙. Keep it short, warm, personal in Hinglish. Then answer his message directly.'
-        : '';
+        ? 'FIRST MESSAGE ONLY: Give a brief time-based greeting (' + timeOfDay + ') then directly answer. DO NOT repeat greetings in follow-up messages.'
+        : 'FOLLOW-UP MESSAGE: No greeting needed. Directly answer Sir\'s question.';
 
       const timeContext = '\n\n[SYSTEM REAL-TIME CONTEXT - NEVER show this block to user]\nIST Time: ' + istTime + '\nIST Date: ' + istDate + '\nTime of day: ' + timeOfDay + (greetingInstruction ? '\n' + greetingInstruction : '');
 
@@ -1783,6 +1783,8 @@ const sara = (() => {
               if (contentEl) {
                 const prose = contentEl.querySelector('.prose');
                 if (prose) {
+                  // Add typing cursor during stream
+                  prose.classList.add('stream-cursor');
                   prose.innerHTML = marked.parse(aiMsg.content);
                   prose.querySelectorAll('pre code').forEach(b => {
                     try { hljs.highlightElement(b); } catch(e) {}
@@ -1803,6 +1805,13 @@ const sara = (() => {
       aiMsg.streaming = false;
       state.generating = false;
       sendBtn.disabled = false;
+      
+      // Remove typing cursor when done
+      const doneEl = document.getElementById(aiMsg.id);
+      if (doneEl) {
+        const prose = doneEl.querySelector('.prose');
+        if (prose) prose.classList.remove('stream-cursor');
+      }
 
       // Extract SARA_MEMORY markers from response
       if (aiMsg.content) {
@@ -2125,13 +2134,13 @@ const sara = (() => {
     const sorted = [...filtered].reverse();
         container.innerHTML = sorted.map(g => {
       return '<div class="goal-item' + (g.completed ? ' completed' : '') + '">' +
-        // FIX 1: Niche wali line me \' lagaya hai taaki ID string me pass ho
+        // Corrected line below:
         '<div class="goal-checkbox' + (g.completed ? ' checked' : '') + '" onclick="sara.toggleGoal(\'' + g.id + '\')"></div>' +
         '<div style="flex:1;">' +
           '<div class="goal-text">' + escHtml(g.text) + '</div>' +
           '<div class="goal-date">' + g.date + '</div>' +
         '</div>' +
-        // FIX 2: Delete button me bhi same fix
+        // Corrected line below:
         '<button class="goal-delete" onclick="sara.deleteGoal(\'' + g.id + '\')"><i class="fas fa-times"></i></button>' +
       '</div>';
     }).join('');
