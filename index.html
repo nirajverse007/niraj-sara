@@ -1047,6 +1047,129 @@ tailwind.config = {
   }
   .memory-empty .memory-empty-icon { font-size: 36px; margin-bottom: 12px; }
 
+  /* Goals Modal */
+  #goals-modal {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+  #goals-modal.open {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(12px);
+    pointer-events: all;
+  }
+  #goals-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 520px;
+    max-height: 82vh;
+    overflow-y: auto;
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+  }
+  #goals-modal.open #goals-panel {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  .goal-tab {
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+  }
+  .goal-tab:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+  .goal-tab.active {
+    background: linear-gradient(135deg, rgba(212,168,67,0.15), rgba(139,92,246,0.1));
+    border-color: rgba(212,168,67,0.3);
+    color: var(--accent-gold);
+  }
+  .goal-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+  }
+  .goal-item:hover { border-color: rgba(212,168,67,0.3); }
+  .goal-item.completed {
+    opacity: 0.6;
+    background: rgba(34,197,94,0.05);
+    border-color: rgba(34,197,94,0.2);
+  }
+  .goal-checkbox {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border-subtle);
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .goal-checkbox:hover { border-color: var(--accent-gold); }
+  .goal-checkbox.checked {
+    background: linear-gradient(135deg, #22c55e, #4ade80);
+    border-color: #22c55e;
+  }
+  .goal-checkbox.checked::after {
+    content: '✓';
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .goal-text {
+    flex: 1;
+    font-size: 13.5px;
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+  .goal-item.completed .goal-text {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+  .goal-date {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .goal-delete {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    font-size: 11px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .goal-delete:hover { color: var(--accent-rose); background: rgba(244,63,142,0.1); }
+  .goals-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .goals-empty-icon { font-size: 36px; margin-bottom: 12px; }
+
   /* Cursor blink for streaming */
   .stream-cursor::after {
     content: '▋';
@@ -1096,6 +1219,11 @@ tailwind.config = {
         <i class="fas fa-brain" style="font-size:13px; color: var(--accent-rose);"></i>
         Sara's Memory
         <span id="memory-count" style="margin-left:auto; background:linear-gradient(135deg,var(--accent-violet),var(--accent-rose)); color:white; font-size:10px; padding:2px 7px; border-radius:10px; font-weight:600;">0</span>
+      </button>
+      <button class="settings-btn" onclick="sara.openGoals()" style="margin-top:4px;">
+        <i class="fas fa-bullseye" style="font-size:13px; color: var(--accent-gold);"></i>
+        Goals & Tasks
+        <span id="goals-count" style="margin-left:auto; background:linear-gradient(135deg,var(--accent-gold),var(--accent-violet)); color:white; font-size:10px; padding:2px 7px; border-radius:10px; font-weight:600;">0</span>
       </button>
       <div class="theme-row">
         <span class="theme-label">Light Mode</span>
@@ -1174,11 +1302,64 @@ tailwind.config = {
     <div class="settings-body" id="memory-list-container">
       <!-- filled by JS -->
     </div>
+    <div style="padding:0 28px 16px;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="manual-memory-type" class="form-input" style="width:110px;padding:9px 12px;flex-shrink:0;">
+          <option value="info">ℹ️ Info</option>
+          <option value="goal">🎯 Goal</option>
+          <option value="mood">💭 Mood</option>
+          <option value="event">📅 Event</option>
+        </select>
+        <input type="text" id="manual-memory-text" class="form-input" placeholder="Kuch important save karo..." style="flex:1;padding:9px 12px;">
+        <button onclick="sara.addManualMemory()" style="padding:9px 14px;background:linear-gradient(135deg,var(--accent-violet),var(--accent-rose));border:none;border-radius:10px;color:white;cursor:pointer;font-size:13px;flex-shrink:0;"><i class="fas fa-plus"></i></button>
+      </div>
+    </div>
     <div class="settings-footer" style="justify-content:space-between;">
       <button class="btn-cancel" onclick="sara.clearAllMemory()" style="color:#f43f8e;border-color:rgba(244,63,142,0.3);">
         <i class="fas fa-trash" style="margin-right:6px;font-size:11px;"></i>Clear All
       </button>
       <button class="btn-save" onclick="sara.closeMemory()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Goals Modal -->
+<div id="goals-modal" onclick="if(event.target===this)sara.closeGoals()">
+  <div id="goals-panel">
+    <div class="settings-header">
+      <div class="settings-title" style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">🎯</span> Goals & Tasks
+      </div>
+      <button class="close-btn" onclick="sara.closeGoals()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="settings-body">
+      <!-- Add new goal -->
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="new-goal-text" class="form-input" placeholder="Add a new goal..." style="flex:1;padding:10px 14px;">
+          <button onclick="sara.addGoal()" style="padding:10px 16px;background:linear-gradient(135deg,var(--accent-gold),var(--accent-violet));border:none;border-radius:12px;color:white;cursor:pointer;font-size:13px;font-weight:500;flex-shrink:0;">
+            <i class="fas fa-plus" style="margin-right:6px;"></i>Add
+          </button>
+        </div>
+      </div>
+      
+      <!-- Filter tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border-subtle);padding-bottom:12px;">
+        <button class="goal-tab active" data-filter="all" onclick="sara.filterGoals('all')">All</button>
+        <button class="goal-tab" data-filter="pending" onclick="sara.filterGoals('pending')">Pending</button>
+        <button class="goal-tab" data-filter="completed" onclick="sara.filterGoals('completed')">Completed</button>
+      </div>
+      
+      <!-- Goals list -->
+      <div id="goals-list-container"></div>
+    </div>
+    <div class="settings-footer" style="justify-content:space-between;">
+      <div style="font-size:11px;color:var(--text-muted);">
+        <span id="goals-stats"></span>
+      </div>
+      <button class="btn-save" onclick="sara.closeGoals()">Done</button>
     </div>
   </div>
 </div>
@@ -1319,6 +1500,8 @@ const sara = (() => {
       darkMode: true
     },
     memories: [],
+    goals: [],
+    goalsFilter: 'all',
     generating: false
   };
 
@@ -1334,9 +1517,12 @@ const sara = (() => {
       state.settings.systemPrompt = DEFAULT_SYSTEM_PROMPT;
       // Ensure memories array exists
       if (!state.memories) state.memories = [];
+      if (!state.goals) state.goals = [];
+      if (!state.goalsFilter) state.goalsFilter = 'all';
     } catch(e) {
       localStorage.removeItem('sara_v2');
       state.memories = [];
+      state.goals = [];
     }
 
     // Apply theme
@@ -1552,7 +1738,8 @@ const sara = (() => {
       const timeContext = '\n\n[SYSTEM REAL-TIME CONTEXT - NEVER show this block to user]\nIST Time: ' + istTime + '\nIST Date: ' + istDate + '\nTime of day: ' + timeOfDay + (greetingInstruction ? '\n' + greetingInstruction : '');
 
       const memoryContext = getMemoryContext();
-      const finalSystem = systemPrompt + timeContext + memoryContext + '\n\n[MEMORY EXTRACTION RULE]\nAfter responding, if Sir shared something important (mood, goal, event, personal info), add at the very END of your response on a NEW LINE: SARA_MEMORY:type:text\nTypes: mood/goal/event/info\nExample: SARA_MEMORY:goal:Sir wants to learn Python\nSARA_MEMORY:mood:Sir was feeling stressed today\nOnly add if truly important. Max 2 per response. NEVER show SARA_MEMORY lines to user - they are hidden markers.';
+      const goalsContext = getGoalsContext();
+      const finalSystem = systemPrompt + timeContext + memoryContext + goalsContext + '\n\n[MEMORY EXTRACTION RULE]\nAfter responding, if Sir shared something important (mood, goal, event, personal info), add at the very END of your response on a NEW LINE: SARA_MEMORY:type:text\nTypes: mood/goal/event/info\nExample: SARA_MEMORY:goal:Sir wants to learn Python\nSARA_MEMORY:mood:Sir was feeling stressed today\nOnly add if truly important. Max 2 per response. NEVER show SARA_MEMORY lines to user - they are hidden markers.';
 
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -1623,7 +1810,6 @@ const sara = (() => {
         lines.forEach(line => {
           const trimmed = line.trim();
           if (trimmed.startsWith('SARA_MEMORY:')) {
-            // Parse: SARA_MEMORY:type:text
             const parts = trimmed.split(':');
             if (parts.length >= 3) {
               const type = parts[1].toLowerCase().trim();
@@ -1634,8 +1820,35 @@ const sara = (() => {
             cleanLines.push(line);
           }
         });
-        // Remove SARA_MEMORY lines from visible response
         aiMsg.content = cleanLines.join('\n').trim();
+
+        // Also auto-detect important info from user message
+        const lastUserMsg = chat.messages.filter(m => m.role === 'user').slice(-2, -1)[0];
+        if (lastUserMsg) {
+          const umsg = lastUserMsg.content.toLowerCase();
+          // Auto detect mood
+          if (umsg.includes('thak') || umsg.includes('tired') || umsg.includes('stressed')) {
+            addMemory('Sir felt tired/stressed: "' + lastUserMsg.content.slice(0,60) + '"', 'mood');
+          } else if (umsg.includes('khush') || umsg.includes('happy') || umsg.includes('achha')) {
+            addMemory('Sir was happy: "' + lastUserMsg.content.slice(0,60) + '"', 'mood');
+          }
+          // Auto detect goals
+          if (umsg.includes('sikhna') || umsg.includes('seekhna') || umsg.includes('learn') || umsg.includes('sikhna')) {
+            addMemory('Sir wants to learn: "' + lastUserMsg.content.slice(0,80) + '"', 'goal');
+          }
+          // Auto detect exams/events
+          if (umsg.includes('exam') || umsg.includes('test') || umsg.includes('interview')) {
+            addMemory('Sir mentioned exam/test: "' + lastUserMsg.content.slice(0,80) + '"', 'event');
+          }
+          // Personal info
+          if (umsg.includes('mera naam') || umsg.includes('meri age') || umsg.includes('mera birthday') || umsg.includes('meri city')) {
+            addMemory('Personal info: "' + lastUserMsg.content.slice(0,80) + '"', 'info');
+          }
+          // Block/sad events
+          if (umsg.includes('block') || umsg.includes('dil toota') || umsg.includes('hurt') || umsg.includes('sad')) {
+            addMemory('Sir was emotionally affected: "' + lastUserMsg.content.slice(0,80) + '"', 'mood');
+          }
+        }
       }
 
       save();
@@ -1647,6 +1860,7 @@ const sara = (() => {
   function renderSidebar() {
     updateModelDisplay();
     updateMemoryCount();
+    updateGoalsCount();
     const list = $('chat-history-list');
     if (!list) return;
     list.innerHTML = '';
@@ -1793,6 +2007,15 @@ const sara = (() => {
     renderMemoryList();
   }
 
+  function addManualMemory() {
+    const text = document.getElementById('manual-memory-text').value.trim();
+    const type = document.getElementById('manual-memory-type').value;
+    if (!text) return;
+    addMemory(text, type);
+    document.getElementById('manual-memory-text').value = '';
+    renderMemoryList();
+  }
+
   function updateMemoryCount() {
     const badge = document.getElementById('memory-count');
     if (badge) badge.textContent = (state.memories || []).length;
@@ -1816,7 +2039,130 @@ const sara = (() => {
 
   // ========== END MEMORY SYSTEM ==========
 
-  return { init, toggleTheme, openSidebar, closeSidebar, openSettings, closeSettings, saveSettings, newChat, loadChat, deleteChat, renameChat, send, chipMsg, openMemory, closeMemory, deleteMemory, clearAllMemory };
+  // ========== GOALS SYSTEM ==========
+
+  function openGoals() {
+    renderGoalsList();
+    document.getElementById('goals-modal').classList.add('open');
+    closeSidebar();
+  }
+
+  function closeGoals() {
+    document.getElementById('goals-modal').classList.remove('open');
+  }
+
+  function addGoal() {
+    const input = document.getElementById('new-goal-text');
+    const text = input.value.trim();
+    if (!text) return;
+    
+    if (!state.goals) state.goals = [];
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short' });
+    state.goals.push({
+      id: Date.now().toString(),
+      text,
+      completed: false,
+      date: dateStr,
+      ts: Date.now()
+    });
+    
+    input.value = '';
+    save();
+    renderGoalsList();
+    updateGoalsCount();
+  }
+
+  function toggleGoal(id) {
+    const goal = state.goals.find(g => g.id === id);
+    if (goal) {
+      goal.completed = !goal.completed;
+      save();
+      renderGoalsList();
+    }
+  }
+
+  function deleteGoal(id) {
+    state.goals = state.goals.filter(g => g.id !== id);
+    save();
+    renderGoalsList();
+    updateGoalsCount();
+  }
+
+  function filterGoals(filter) {
+    state.goalsFilter = filter;
+    document.querySelectorAll('.goal-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.filter === filter);
+    });
+    renderGoalsList();
+  }
+
+  function renderGoalsList() {
+    const container = document.getElementById('goals-list-container');
+    if (!container) return;
+    updateGoalsCount();
+    
+    if (!state.goals || state.goals.length === 0) {
+      container.innerHTML = '<div class="goals-empty"><div class="goals-empty-icon">🎯</div><div>No goals yet</div><div style="font-size:11px;margin-top:8px;opacity:0.6;">Add your first goal to get started!</div></div>';
+      updateGoalsStats();
+      return;
+    }
+
+    let filtered = state.goals;
+    if (state.goalsFilter === 'pending') {
+      filtered = state.goals.filter(g => !g.completed);
+    } else if (state.goalsFilter === 'completed') {
+      filtered = state.goals.filter(g => g.completed);
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="goals-empty"><div class="goals-empty-icon">✨</div><div>No ' + state.goalsFilter + ' goals</div></div>';
+      updateGoalsStats();
+      return;
+    }
+
+    const sorted = [...filtered].reverse();
+    container.innerHTML = sorted.map(g => {
+      return '<div class="goal-item' + (g.completed ? ' completed' : '') + '">' +
+        '<div class="goal-checkbox' + (g.completed ? ' checked' : '') + '" onclick="sara.toggleGoal('' + g.id + '')"></div>' +
+        '<div style="flex:1;">' +
+          '<div class="goal-text">' + escHtml(g.text) + '</div>' +
+          '<div class="goal-date">' + g.date + '</div>' +
+        '</div>' +
+        '<button class="goal-delete" onclick="sara.deleteGoal('' + g.id + '')"><i class="fas fa-times"></i></button>' +
+      '</div>';
+    }).join('');
+    
+    updateGoalsStats();
+  }
+
+  function updateGoalsStats() {
+    const statsEl = document.getElementById('goals-stats');
+    if (!statsEl || !state.goals) return;
+    const total = state.goals.length;
+    const completed = state.goals.filter(g => g.completed).length;
+    const pending = total - completed;
+    statsEl.textContent = total + ' total • ' + completed + ' done • ' + pending + ' pending';
+  }
+
+  function updateGoalsCount() {
+    const badge = document.getElementById('goals-count');
+    if (!badge || !state.goals) return;
+    const pending = state.goals.filter(g => !g.completed).length;
+    badge.textContent = pending;
+  }
+
+  function getGoalsContext() {
+    if (!state.goals || state.goals.length === 0) return '';
+    const pending = state.goals.filter(g => !g.completed);
+    if (pending.length === 0) return '';
+    const goalsText = pending.slice(0, 10).map((g, i) => (i+1) + '. ' + g.text).join('\n');
+    return '\n\n[SIR PENDING GOALS - Remind and motivate Sir about these]\n' + goalsText;
+  }
+
+  // ========== END GOALS SYSTEM ==========
+
+  return { init, toggleTheme, openSidebar, closeSidebar, openSettings, closeSettings, saveSettings, newChat, loadChat, deleteChat, renameChat, send, chipMsg, openMemory, closeMemory, deleteMemory, clearAllMemory, addManualMemory, openGoals, closeGoals, addGoal, toggleGoal, deleteGoal, filterGoals };
 })();
 
 document.addEventListener('DOMContentLoaded', sara.init);
