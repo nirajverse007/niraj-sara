@@ -1168,6 +1168,28 @@ tailwind.config = {
     font-size: 12px;
   }
   @keyframes blink { 50% { opacity: 0; } }
+
+  /* ===== VOICE BUTTON ===== */
+  .voice-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    padding: 4px 10px;
+    background: rgba(139, 92, 246, 0.08);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: 0.03em;
+  }
+  .voice-btn:hover { background: rgba(139, 92, 246, 0.15); color: var(--accent-violet); border-color: rgba(139,92,246,0.4); }
+  .voice-btn.speaking { background: rgba(244, 63, 142, 0.12); color: var(--accent-rose); border-color: rgba(244,63,142,0.4); animation: pulse-voice 1s ease-in-out infinite; }
+  @keyframes pulse-voice { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
 </style>
 </head>
 <body>
@@ -1363,6 +1385,13 @@ tailwind.config = {
         <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Auto-retry when model doesn't respond. Helps fix blank answer problem. ✅</div>
       </div>
       <div class="form-group">
+        <label class="form-label">Voice for Sara</label>
+        <select id="s-voice" class="form-input" style="padding:12px 16px;">
+          <option value="">-- Loading voices... --</option>
+        </select>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Apne phone/browser ki available voices mein se choose karo 🎙️</div>
+      </div>
+      <div class="form-group">
         <label class="form-label">System Prompt</label>
         <textarea id="s-prompt" class="form-input" rows="5" placeholder="Define Sara's personality..."></textarea>
       </div>
@@ -1548,7 +1577,8 @@ const sara = (() => {
       model: 'deepseek/deepseek-r1:free',
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
       darkMode: true,
-      maxRetries: 2
+      maxRetries: 2,
+      selectedVoice: ''
     },
     memories: [],
     goals: [],
@@ -1560,12 +1590,12 @@ const sara = (() => {
 
   function init() {
     try {
-      // Migrate old sara_v2 data if sara_v3 doesn't exist yet
-      if (!localStorage.getItem('sara_v3') && localStorage.getItem('sara_v2')) {
-        const oldData = JSON.parse(localStorage.getItem('sara_v2') || '{}');
-        localStorage.setItem('sara_v3', JSON.stringify(oldData));
+      // Migrate: v2 or v3 → v4
+      if (!localStorage.getItem('sara_v4')) {
+        const old = localStorage.getItem('sara_v3') || localStorage.getItem('sara_v2');
+        if (old) localStorage.setItem('sara_v4', old);
       }
-      const saved = JSON.parse(localStorage.getItem('sara_v3') || '{}');
+      const saved = JSON.parse(localStorage.getItem('sara_v4') || '{}');
       state = { ...state, ...saved };
       state.settings.systemPrompt = DEFAULT_SYSTEM_PROMPT;
       if (!state.memories) state.memories = [];
@@ -1635,6 +1665,17 @@ const sara = (() => {
     $('s-model').value = state.settings.model;
     $('s-prompt').value = state.settings.systemPrompt;
     $('s-retries').value = String(state.settings.maxRetries || 2);
+    // Populate voice list
+    const voiceSel = $('s-voice');
+    if (voiceSel) {
+      const populateVoices = () => {
+        const voices = window.speechSynthesis.getVoices();
+        voiceSel.innerHTML = '<option value="">Auto (default)</option>' +
+          voices.map((v,i) => `<option value="${v.name}" ${v.name === state.settings.selectedVoice ? 'selected' : ''}>${v.name} (${v.lang})</option>`).join('');
+      };
+      populateVoices();
+      window.speechSynthesis.onvoiceschanged = populateVoices;
+    }
     $('settings-modal').classList.add('open');
   }
   function closeSettings() { $('settings-modal').classList.remove('open'); }
@@ -1644,6 +1685,7 @@ const sara = (() => {
     state.settings.model = selectedModel || 'deepseek/deepseek-r1:free';
     state.settings.systemPrompt = $('s-prompt').value.trim() || DEFAULT_SYSTEM_PROMPT;
     state.settings.maxRetries = parseInt($('s-retries').value) || 2;
+    state.settings.selectedVoice = $('s-voice') ? $('s-voice').value : '';
     save();
     closeSettings();
     renderChat();
@@ -2002,6 +2044,9 @@ const sara = (() => {
         contentHtml = `<div class="prose${msg.streaming ? ' stream-cursor' : ''}">${marked.parse(msg.content || '')}</div>`;
       }
 
+      const voiceBtn = (!isUser && msg.content && !msg.streaming) 
+        ? `<button class="voice-btn" onclick="sara.speakText(${JSON.stringify(msg.content || '')}, this, '${msg.id || ''}')"><i class="fas fa-volume-up"></i> Listen</button>`
+        : '';
       row.innerHTML = `
         <div class="msg-avatar ${isUser ? 'user-avatar' : 'sara-avatar'}">
           ${isUser ? '<i class="fas fa-user" style="font-size:12px;"></i>' : 'S'}
@@ -2009,6 +2054,7 @@ const sara = (() => {
         <div class="msg-bubble">
           <div class="msg-name">${isUser ? 'Sir' : 'Sara'}</div>
           <div class="msg-content ${isUser ? 'user-content' : 'sara-content'}">${contentHtml}</div>
+          ${voiceBtn}
         </div>
       `;
       mc.appendChild(row);
@@ -2023,7 +2069,7 @@ const sara = (() => {
   }
 
   function save() {
-    try { localStorage.setItem('sara_v3', JSON.stringify(state)); } catch(e) {}
+    try { localStorage.setItem('sara_v4', JSON.stringify(state)); } catch(e) {}
   }
 
   // ===== MEMORY SYSTEM =====
@@ -2150,7 +2196,69 @@ const sara = (() => {
     return '\n\n[SIR PENDING GOALS - Remind and motivate Sir about these]\n' + goalsText;
   }
 
-  return { init, toggleTheme, openSidebar, closeSidebar, openSettings, closeSettings, saveSettings, newChat, loadChat, deleteChat, renameChat, send, chipMsg, openMemory, closeMemory, deleteMemory, clearAllMemory, addManualMemory, openGoals, closeGoals, addGoal, toggleGoal, deleteGoal, filterGoals };
+
+  // ===== VOICE SYSTEM =====
+  let currentUtterance = null;
+  let speakingMsgId = null;
+
+  function speakText(text, btnEl, msgId) {
+    // Stop if already speaking this message
+    if (speakingMsgId === msgId) {
+      window.speechSynthesis.cancel();
+      speakingMsgId = null;
+      if (btnEl) { btnEl.classList.remove('speaking'); btnEl.innerHTML = '<i class="fas fa-volume-up"></i> Listen'; }
+      return;
+    }
+    // Stop any previous speech
+    window.speechSynthesis.cancel();
+    if (speakingMsgId) {
+      const prevBtn = document.querySelector('.voice-btn.speaking');
+      if (prevBtn) { prevBtn.classList.remove('speaking'); prevBtn.innerHTML = '<i class="fas fa-volume-up"></i> Listen'; }
+    }
+
+    // Clean text — remove markdown, code blocks, SARA_MEMORY lines
+    let clean = text
+      .split('\n').filter(l => !l.trim().startsWith('SARA_MEMORY:')).join(' ')
+      .replace(/```[\s\S]*?```/g, ' code block ')
+      .replace(/`[^`]+`/g, '')
+      .replace(/[#*_~>|\[\]]/g, '')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/\s+/g, ' ').trim();
+
+    if (!clean) return;
+
+    currentUtterance = new SpeechSynthesisUtterance(clean);
+    currentUtterance.lang = 'hi-IN';
+    currentUtterance.rate = 0.95;
+    currentUtterance.pitch = 1.05;
+
+    // Use user selected voice or auto pick
+    const voices = window.speechSynthesis.getVoices();
+    let chosenVoice = null;
+    if (state.settings.selectedVoice) {
+      chosenVoice = voices.find(v => v.name === state.settings.selectedVoice) || null;
+    }
+    if (!chosenVoice) {
+      chosenVoice = voices.find(v => v.lang.startsWith('hi')) || voices.find(v => v.lang.startsWith('en-IN')) || null;
+    }
+    if (chosenVoice) currentUtterance.voice = chosenVoice;
+
+    speakingMsgId = msgId;
+    if (btnEl) { btnEl.classList.add('speaking'); btnEl.innerHTML = '<i class="fas fa-stop"></i> Stop'; }
+
+    currentUtterance.onend = () => {
+      speakingMsgId = null;
+      if (btnEl) { btnEl.classList.remove('speaking'); btnEl.innerHTML = '<i class="fas fa-volume-up"></i> Listen'; }
+    };
+    currentUtterance.onerror = () => {
+      speakingMsgId = null;
+      if (btnEl) { btnEl.classList.remove('speaking'); btnEl.innerHTML = '<i class="fas fa-volume-up"></i> Listen'; }
+    };
+
+    window.speechSynthesis.speak(currentUtterance);
+  }
+
+  return { init, toggleTheme, speakText, openSidebar, closeSidebar, openSettings, closeSettings, saveSettings, newChat, loadChat, deleteChat, renameChat, send, chipMsg, openMemory, closeMemory, deleteMemory, clearAllMemory, addManualMemory, openGoals, closeGoals, addGoal, toggleGoal, deleteGoal, filterGoals };
 })();
 
 document.addEventListener('DOMContentLoaded', sara.init);
