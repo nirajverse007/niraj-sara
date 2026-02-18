@@ -1836,11 +1836,13 @@ const sara = (() => {
               if (delta) {
                 hasContent = true;
                 aiMsg.content += delta;
+                // Filter out SARA_MEMORY lines before showing in chat
+                const visibleContent = aiMsg.content.split('\n').filter(l => !l.trim().startsWith('SARA_MEMORY:')).join('\n');
                 const msgEl = document.getElementById(aiMsg.id);
                 if (msgEl) {
                   const prose = msgEl.querySelector('.prose');
                   if (prose) {
-                    prose.innerHTML = marked.parse(aiMsg.content);
+                    prose.innerHTML = marked.parse(visibleContent);
                     prose.classList.add('stream-cursor');
                     prose.querySelectorAll('pre code').forEach(b => { try { hljs.highlightElement(b); } catch(e) {} });
                     $('messages-container').scrollTop = $('messages-container').scrollHeight;
@@ -1879,7 +1881,9 @@ const sara = (() => {
           const prose = doneEl.querySelector('.prose');
           if (prose) {
             prose.classList.remove('stream-cursor');
-            prose.innerHTML = marked.parse(aiMsg.content);
+            // Always hide SARA_MEMORY lines from chat
+            const cleanForDisplay = aiMsg.content.split('\n').filter(l => !l.trim().startsWith('SARA_MEMORY:')).join('\n').trim();
+            prose.innerHTML = marked.parse(cleanForDisplay);
             prose.querySelectorAll('pre code').forEach(b => { try { hljs.highlightElement(b); } catch(e) {} });
           }
         }
