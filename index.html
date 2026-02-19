@@ -1287,7 +1287,6 @@ tailwind.config = {
   </main>
 </div>
 
-<!-- Memory Modal -->
 <div id="memory-modal" onclick="if(event.target===this)sara.closeMemory()">
   <div id="memory-panel">
     <div class="settings-header">
@@ -1320,7 +1319,6 @@ tailwind.config = {
   </div>
 </div>
 
-<!-- Goals Modal -->
 <div id="goals-modal" onclick="if(event.target===this)sara.closeGoals()">
   <div id="goals-panel">
     <div class="settings-header">
@@ -1354,7 +1352,6 @@ tailwind.config = {
   </div>
 </div>
 
-<!-- Settings Modal -->
 <div id="settings-modal" onclick="if(event.target===this)sara.closeSettings()">
   <div id="settings-panel">
     <div class="settings-header">
@@ -1488,7 +1485,7 @@ TONE FOR TEACHING:
 TOPIC CONTROL RULE - STRICT (MOST IMPORTANT RULE IN TEACHING):
 - EK MESSAGE MEIN SIRF EK HI TOPIC — yeh rule todna allowed nahi hai kabhi bhi
 - Ek topic explain karo, practical task do, aur RUK JAO — next topic mat batao
-- Jab tak Sir khud na bole Next, Aage batao, ya Samajh gaya — aage mat badho
+- Jab tak Sir khud na bole Next, Aage batao, ya Samajh gaya — aage mat bedho
 - Chahe Sir ne pehle poora roadmap maanga ho — phir bhi ek ek karke batao, ek message mein ek
 - Har 5 topics ke baad Mini Test
 - Har 10 topics ke baad Mini Project
@@ -1590,7 +1587,6 @@ const sara = (() => {
 
   function init() {
     try {
-      // Migrate: v2 or v3 → v4
       if (!localStorage.getItem('sara_v4')) {
         const old = localStorage.getItem('sara_v3') || localStorage.getItem('sara_v2');
         if (old) localStorage.setItem('sara_v4', old);
@@ -1636,8 +1632,6 @@ const sara = (() => {
       }
     }
     waitAndShow();
-
-
   }
 
   function applyTheme() {
@@ -1665,7 +1659,6 @@ const sara = (() => {
     $('s-model').value = state.settings.model;
     $('s-prompt').value = state.settings.systemPrompt;
     $('s-retries').value = String(state.settings.maxRetries || 2);
-    // Populate voice list
     const voiceSel = $('s-voice');
     if (voiceSel) {
       const populateVoices = () => {
@@ -1727,18 +1720,12 @@ const sara = (() => {
 
   function chipMsg(text) { $('user-input').value = text; send(); }
 
-  // =============================================
-  //  CORE API CALL WITH RETRY LOGIC
-  // =============================================
   async function callAPIWithRetry(messages, maxRetries) {
     let lastError = null;
-    
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       try {
         const controller = new AbortController();
-        // 90 second timeout per attempt
         const timeoutId = setTimeout(() => controller.abort(), 90000);
-        
         const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -1756,29 +1743,15 @@ const sara = (() => {
           }),
           signal: controller.signal
         });
-        
         clearTimeout(timeoutId);
-        
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: { message: `HTTP ${res.status}` } }));
-          const errMsg = err?.error?.message || `HTTP ${res.status}`;
-          // Don't retry on auth errors
-          if (res.status === 401 || res.status === 403) throw new Error(errMsg);
-          throw new Error(errMsg);
+          throw new Error(err?.error?.message || `HTTP ${res.status}`);
         }
-        
-        return res; // Success - return response
-        
+        return res;
       } catch(err) {
         lastError = err;
-        
-        // If aborted (timeout) or last attempt, don't retry
-        if (err.name === 'AbortError') {
-          lastError = new Error('Request timed out after 90s. Please try again.');
-        }
-        
         if (attempt <= maxRetries) {
-          // Update typing indicator with retry info
           const chat = state.chats.find(c => c.id === state.currentId);
           if (chat) {
             const aiMsg = chat.messages[chat.messages.length - 1];
@@ -1786,19 +1759,15 @@ const sara = (() => {
               const msgEl = document.getElementById(aiMsg.id);
               if (msgEl) {
                 const contentDiv = msgEl.querySelector('.msg-content');
-                if (contentDiv) {
-                  contentDiv.innerHTML = `<div class="retry-indicator"><i class="fas fa-sync-alt"></i> Retry ${attempt}/${maxRetries}... Sara dubara try kar rahi hai 🔄</div>`;
-                }
+                if (contentDiv) contentDiv.innerHTML = `<div class="retry-indicator"><i class="fas fa-sync-alt"></i> Retry ${attempt}/${maxRetries}...</div>`;
               }
             }
           }
-          // Wait before retry (exponential backoff)
           await new Promise(r => setTimeout(r, 1500 * attempt));
           continue;
         }
       }
     }
-    
     throw lastError;
   }
 
@@ -1806,10 +1775,8 @@ const sara = (() => {
     const input = $('user-input');
     const text = input.value.trim();
     if (!text || state.generating) return;
-
     if (!state.settings.apiKey) { openSettings(); return; }
     if (!state.currentId) newChat();
-
     const chat = state.chats.find(c => c.id === state.currentId);
     if (!chat) return;
 
@@ -1817,10 +1784,8 @@ const sara = (() => {
       chat.title = text.slice(0, 36) + (text.length > 36 ? '…' : '');
       renderSidebar();
     }
-
     chat.messages.push({ role: 'user', content: text });
-    input.value = '';
-    input.style.height = 'auto';
+    input.value = ''; input.style.height = 'auto';
 
     const aiMsg = { role: 'assistant', content: '', id: 'msg-' + Date.now(), streaming: true };
     chat.messages.push(aiMsg);
@@ -1829,66 +1794,45 @@ const sara = (() => {
     $('send-btn').disabled = true;
 
     try {
-      const msgs = chat.messages
-        .filter(m => !(m.streaming && !m.content))
-        .map(m => ({ role: m.role, content: m.content }));
-
-      const systemPrompt = state.settings.systemPrompt || DEFAULT_SYSTEM_PROMPT;
-
-      // Real IST time injection
+      const msgs = chat.messages.filter(m => !(m.streaming && !m.content)).map(m => ({ role: m.role, content: m.content }));
       const now = new Date();
       const istTime = now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
       const istDate = now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric' });
       const istHour = parseInt(new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', hour12: false }).format(now));
       let timeOfDay = istHour >= 5 && istHour < 12 ? 'morning' : istHour >= 12 && istHour < 17 ? 'afternoon' : istHour >= 17 && istHour < 21 ? 'evening' : 'night';
 
-      const userMsgCount = chat.messages.filter(m => m.role === 'user').length;
-      const isFirstMsg = userMsgCount === 1;
-      const greetingInstruction = isFirstMsg
-        ? 'FIRST MESSAGE ONLY: Give a brief time-based greeting (' + timeOfDay + ') then directly answer. DO NOT repeat greetings in follow-up messages.'
-        : 'FOLLOW-UP MESSAGE: No greeting needed. Directly answer Sir\'s question completely.';
+      const isFirstMsg = chat.messages.filter(m => m.role === 'user').length === 1;
+      const greetingInstruction = isFirstMsg 
+        ? `\n\n[TIME CONTEXT] Current time is ${istTime}, date ${istDate}. It's ${timeOfDay}. Since this is the first message, start with a warm personal greeting.` 
+        : `\n\n[TIME CONTEXT] Current time ${istTime}. Follow-up message - skip greeting and directly help.`;
 
-      const timeContext = '\n\n[SYSTEM REAL-TIME CONTEXT - NEVER show this block to user]\nIST Time: ' + istTime + '\nIST Date: ' + istDate + '\nTime of day: ' + timeOfDay + '\n' + greetingInstruction;
-      const memoryContext = getMemoryContext();
-      const goalsContext = getGoalsContext();
-      const finalSystem = systemPrompt + timeContext + memoryContext + goalsContext + '\n\n[MEMORY EXTRACTION RULE]\nAfter responding, if Sir shared something important (mood, goal, event, personal info), add at END on a NEW LINE: SARA_MEMORY:type:text\nTypes: mood/goal/event/info\nMax 2 per response. NEVER show SARA_MEMORY lines to user.\n\n[CRITICAL RULE] Always give COMPLETE answers. Never stop mid-response. Never give empty or partial replies.';
+      const finalSystem = state.settings.systemPrompt + greetingInstruction + getMemoryContext() + getGoalsContext() + '\n\n[MEMORY RULE] If Sir shares a goal, mood, or info, end with SARA_MEMORY:type:text line.';
 
-      let finalMessages = [{ role: 'system', content: finalSystem }, ...msgs];
-
-      // Call API with retry logic
-      const maxRetries = state.settings.maxRetries || 2;
-      const res = await callAPIWithRetry(finalMessages, maxRetries);
-
+      const res = await callAPIWithRetry([{ role: 'system', content: finalSystem }, ...msgs], state.settings.maxRetries);
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let hasContent = false;
       
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         const chunk = decoder.decode(value);
         const lines = chunk.split('\n');
-        
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') continue;
             try {
-              const parsed = JSON.parse(data);
-              const delta = parsed.choices?.[0]?.delta?.content || '';
+              const delta = JSON.parse(data).choices?.[0]?.delta?.content || '';
               if (delta) {
-                hasContent = true;
                 aiMsg.content += delta;
-                // Filter out SARA_MEMORY lines before showing in chat
-                const visibleContent = aiMsg.content.split('\n').filter(l => !l.trim().startsWith('SARA_MEMORY:')).join('\n');
+                const visible = aiMsg.content.split('\n').filter(l => !l.trim().startsWith('SARA_MEMORY:')).join('\n');
                 const msgEl = document.getElementById(aiMsg.id);
                 if (msgEl) {
                   const prose = msgEl.querySelector('.prose');
                   if (prose) {
-                    prose.innerHTML = marked.parse(visibleContent);
+                    prose.innerHTML = marked.parse(visible);
                     prose.classList.add('stream-cursor');
-                    prose.querySelectorAll('pre code').forEach(b => { try { hljs.highlightElement(b); } catch(e) {} });
+                    prose.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
                     $('messages-container').scrollTop = $('messages-container').scrollHeight;
                   }
                 }
@@ -1897,368 +1841,114 @@ const sara = (() => {
           }
         }
       }
-
-      // If model returned nothing useful, show helpful error
-      if (!hasContent || aiMsg.content.trim() === '') {
-        aiMsg.content = 'Sir, model ne iss baar response nahi diya 😕 Please dobara try karein. Agar problem persist kare toh Settings mein model change kar ke dekho. 🔧';
-      }
-
     } catch(err) {
-      const errMsg = err.message || 'Unknown error';
-      if (errMsg.includes('401') || errMsg.includes('403') || errMsg.includes('Unauthorized')) {
-        aiMsg.content = '**❌ API Key Error:** Sir, API key galat hai ya expire ho gayi. Settings mein jaa ke naya key daalo. 🔑';
-      } else if (errMsg.includes('timed out') || errMsg.includes('abort')) {
-        aiMsg.content = '**⏱️ Timeout:** Sir, server ne respond nahi kiya. Please retry karein. Model busy ho sakta hai. 🔄';
-      } else if (errMsg.includes('rate') || errMsg.includes('429')) {
-        aiMsg.content = '**⚠️ Rate Limit:** Sir, bahut zyada requests ho gayi. Thoda wait karo aur phir try karo. ⏳';
-      } else {
-        aiMsg.content = `**❌ Error:** ${errMsg}\n\nSir, please check karein:\n1. API key sahi hai?\n2. Model name sahi hai?\n3. Internet connection theek hai?`;
-      }
+      aiMsg.content = `**Error:** ${err.message}. Please check your API Key or try again later.`;
     } finally {
-      aiMsg.streaming = false;
-      state.generating = false;
+      aiMsg.streaming = false; state.generating = false;
       $('send-btn').disabled = false;
-      
-      setTimeout(() => {
-        const doneEl = document.getElementById(aiMsg.id);
-        if (doneEl) {
-          const prose = doneEl.querySelector('.prose');
-          if (prose) {
-            prose.classList.remove('stream-cursor');
-            // Always hide SARA_MEMORY lines from chat
-            const cleanForDisplay = aiMsg.content.split('\n').filter(l => !l.trim().startsWith('SARA_MEMORY:')).join('\n').trim();
-            prose.innerHTML = marked.parse(cleanForDisplay);
-            prose.querySelectorAll('pre code').forEach(b => { try { hljs.highlightElement(b); } catch(e) {} });
-          }
-        }
-      }, 100);
-
-      // Extract SARA_MEMORY markers
+      const doneEl = document.getElementById(aiMsg.id);
+      if (doneEl) {
+        const prose = doneEl.querySelector('.prose');
+        if (prose) prose.classList.remove('stream-cursor');
+      }
+      // Memory Extraction
       if (aiMsg.content) {
         const lines = aiMsg.content.split('\n');
-        const cleanLines = [];
-        lines.forEach(line => {
-          const trimmed = line.trim();
-          if (trimmed.startsWith('SARA_MEMORY:')) {
-            const parts = trimmed.split(':');
-            if (parts.length >= 3) {
-              const type = parts[1].toLowerCase().trim();
-              const text = parts.slice(2).join(':').trim();
-              if (text) addMemory(text, type);
-            }
-          } else {
-            cleanLines.push(line);
+        aiMsg.content = lines.filter(l => {
+          if (l.trim().startsWith('SARA_MEMORY:')) {
+            const parts = l.split(':');
+            if (parts.length >= 3) addMemory(parts.slice(2).join(':'), parts[1]);
+            return false;
           }
-        });
-        aiMsg.content = cleanLines.join('\n').trim();
-
-        // Auto-detect important info from user message
-        const lastUserMsg = chat.messages.filter(m => m.role === 'user').slice(-2, -1)[0];
-        if (lastUserMsg) {
-          const umsg = lastUserMsg.content.toLowerCase();
-          if (umsg.includes('thak') || umsg.includes('tired') || umsg.includes('stressed')) {
-            addMemory('Sir felt tired/stressed: "' + lastUserMsg.content.slice(0,60) + '"', 'mood');
-          } else if (umsg.includes('khush') || umsg.includes('happy') || umsg.includes('achha')) {
-            addMemory('Sir was happy: "' + lastUserMsg.content.slice(0,60) + '"', 'mood');
-          }
-          if (umsg.includes('sikhna') || umsg.includes('seekhna') || umsg.includes('learn')) {
-            addMemory('Sir wants to learn: "' + lastUserMsg.content.slice(0,80) + '"', 'goal');
-          }
-          if (umsg.includes('exam') || umsg.includes('test') || umsg.includes('interview')) {
-            addMemory('Sir mentioned exam/test: "' + lastUserMsg.content.slice(0,80) + '"', 'event');
-          }
-          if (umsg.includes('mera naam') || umsg.includes('meri age') || umsg.includes('mera birthday')) {
-            addMemory('Personal info: "' + lastUserMsg.content.slice(0,80) + '"', 'info');
-          }
-        }
+          return true;
+        }).join('\n').trim();
       }
-
-      save();
-      renderChat();
-      updateMemoryCount();
+      save(); renderChat();
     }
   }
 
   function renderSidebar() {
-    updateModelDisplay();
-    updateMemoryCount();
-    updateGoalsCount();
-    const list = $('chat-history-list');
-    if (!list) return;
-    list.innerHTML = '';
-
-    if (state.chats.length === 0) {
-      list.innerHTML = `<div style="padding: 20px 16px; text-align:center; color: var(--text-muted); font-size:12px; letter-spacing:0.05em;">No conversations yet</div>`;
-      return;
-    }
-
+    updateModelDisplay(); updateMemoryCount(); updateGoalsCount();
+    const list = $('chat-history-list'); if (!list) return;
+    list.innerHTML = state.chats.length ? '' : `<div style="padding: 20px 16px; text-align:center; color: var(--text-muted); font-size:12px;">No conversations yet</div>`;
     state.chats.forEach(chat => {
       const div = document.createElement('div');
       div.className = 'chat-item' + (chat.id === state.currentId ? ' active' : '');
-      div.innerHTML = `
-        <div class="chat-item-dot"></div>
-        <div class="chat-title" onclick="sara.loadChat('${chat.id}')">${escHtml(chat.title || 'Conversation')}</div>
-        <div class="chat-actions">
-          <button class="chat-action-btn" onclick="sara.renameChat(event,'${chat.id}')" title="Rename"><i class="fas fa-pen"></i></button>
-          <button class="chat-action-btn del" onclick="sara.deleteChat(event,'${chat.id}')" title="Delete"><i class="fas fa-trash"></i></button>
-        </div>
-      `;
+      div.innerHTML = `<div class="chat-item-dot"></div><div class="chat-title" onclick="sara.loadChat('${chat.id}')">${escHtml(chat.title)}</div>
+        <div class="chat-actions"><button class="chat-action-btn" onclick="sara.renameChat(event,'${chat.id}')"><i class="fas fa-pen"></i></button>
+        <button class="chat-action-btn del" onclick="sara.deleteChat(event,'${chat.id}')"><i class="fas fa-trash"></i></button></div>`;
       list.appendChild(div);
     });
   }
 
   function renderChat() {
-    updateModelDisplay();
-    const mc = $('messages-container');
-    if (!mc) return;
+    const mc = $('messages-container'); if (!mc) return;
     mc.innerHTML = '';
-
     const chat = state.chats.find(c => c.id === state.currentId);
-
-    if (!chat || chat.messages.length === 0) {
-      mc.innerHTML = `
-        <div id="welcome-screen">
-          <div class="welcome-avatar">✦</div>
-          <div class="welcome-title">Hello, Sir</div>
-          <p class="welcome-sub">${state.settings.apiKey ? 'Sara is ready. How can I help you today?' : 'Configure your API key in Settings to begin.'}</p>
-          <div class="welcome-chips">
-            <div class="chip" onclick="sara.chipMsg('Help me study today 📚')">Help me study today 📚</div>
-            <div class="chip" onclick="sara.chipMsg('Review my code 💻')">Review my code 💻</div>
-            <div class="chip" onclick="sara.chipMsg('Motivate me 🚀')">Motivate me 🚀</div>
-            <div class="chip" onclick="sara.chipMsg('Plan my day 📅')">Plan my day 📅</div>
-          </div>
-        </div>`;
+    if (!chat || !chat.messages.length) {
+      mc.innerHTML = `<div id="welcome-screen"><div class="welcome-avatar">✦</div><div class="welcome-title">Hello, Sir</div><p class="welcome-sub">How can I help you today?</p><div class="welcome-chips"><div class="chip" onclick="sara.chipMsg('Help me study today 📚')">Help me study today 📚</div><div class="chip" onclick="sara.chipMsg('Review my code 💻')">Review my code 💻</div><div class="chip" onclick="sara.chipMsg('Plan my day 📅')">Plan my day 📅</div></div></div>`;
       return;
     }
-
     chat.messages.forEach(msg => {
       const isUser = msg.role === 'user';
       const row = document.createElement('div');
       row.className = 'message-row ' + (isUser ? 'user-row' : '');
       row.id = msg.id || '';
-
-      let contentHtml;
-      if (msg.streaming && !msg.content) {
-        contentHtml = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
-      } else {
-        contentHtml = `<div class="prose${msg.streaming ? ' stream-cursor' : ''}">${marked.parse(msg.content || '')}</div>`;
-      }
-
-      const voiceBtn = (!isUser && msg.content && !msg.streaming) 
-        ? `<button class="voice-btn" onclick="sara.speakText(${JSON.stringify(msg.content || '')}, this, '${msg.id || ''}')"><i class="fas fa-volume-up"></i> Listen</button>`
-        : '';
-      row.innerHTML = `
-        <div class="msg-avatar ${isUser ? 'user-avatar' : 'sara-avatar'}">
-          ${isUser ? '<i class="fas fa-user" style="font-size:12px;"></i>' : 'S'}
-        </div>
-        <div class="msg-bubble">
-          <div class="msg-name">${isUser ? 'Sir' : 'Sara'}</div>
-          <div class="msg-content ${isUser ? 'user-content' : 'sara-content'}">${contentHtml}</div>
-          ${voiceBtn}
-        </div>
-      `;
+      row.innerHTML = `<div class="msg-avatar ${isUser ? 'user-avatar' : 'sara-avatar'}">${isUser ? '<i class="fas fa-user"></i>' : 'S'}</div>
+        <div class="msg-bubble"><div class="msg-name">${isUser ? 'Sir' : 'Sara'}</div><div class="msg-content ${isUser ? 'user-content' : 'sara-content'}">
+        <div class="prose">${marked.parse(msg.content || '')}</div></div>
+        ${!isUser && msg.content && !msg.streaming ? `<button class="voice-btn" onclick="sara.speakText(${JSON.stringify(msg.content)}, this, '${msg.id}')"><i class="fas fa-volume-up"></i> Listen</button>` : ''}</div>`;
       mc.appendChild(row);
-      row.querySelectorAll('pre code').forEach(b => { try { hljs.highlightElement(b); } catch(e) {} });
+      row.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
     });
-
     mc.scrollTop = mc.scrollHeight;
   }
 
-  function escHtml(str) {
-    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+  function save() { try { localStorage.setItem('sara_v4', JSON.stringify(state)); } catch(e) {} }
+  function escHtml(str) { return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  function save() {
-    try { localStorage.setItem('sara_v4', JSON.stringify(state)); } catch(e) {}
-  }
-
-  // ===== MEMORY SYSTEM =====
-  function openMemory() { renderMemoryList(); document.getElementById('memory-modal').classList.add('open'); closeSidebar(); }
-  function closeMemory() { document.getElementById('memory-modal').classList.remove('open'); }
-
+  // Memory & Goals Logic
+  function openMemory() { renderMemoryList(); $('memory-modal').classList.add('open'); closeSidebar(); }
+  function closeMemory() { $('memory-modal').classList.remove('open'); }
   function renderMemoryList() {
-    const container = document.getElementById('memory-list-container');
-    if (!container) return;
-    updateMemoryCount();
-    if (!state.memories || state.memories.length === 0) {
-      container.innerHTML = '<div class="memory-empty"><div class="memory-empty-icon">🧠</div><div>No memories yet</div><div style="font-size:11px;margin-top:8px;opacity:0.6;">Sara will automatically remember important things Sir shares.</div></div>';
-      return;
-    }
-    const sorted = [...state.memories].reverse();
-    container.innerHTML = sorted.map((m, i) => {
-      const realIdx = state.memories.length - 1 - i;
-      const tagClass = m.type === 'mood' ? 'tag-mood' : m.type === 'goal' ? 'tag-goal' : m.type === 'event' ? 'tag-event' : 'tag-info';
-      const tagLabel = m.type === 'mood' ? '😊 Mood' : m.type === 'goal' ? '🎯 Goal' : m.type === 'event' ? '📅 Event' : 'ℹ️ Info';
-      return '<div class="memory-item">' +
-        '<div class="memory-icon">' + (m.type === 'mood' ? '💭' : m.type === 'goal' ? '🎯' : m.type === 'event' ? '📅' : '💡') + '</div>' +
-        '<div style="flex:1;"><div class="memory-text">' + escHtml(m.text) + '</div>' +
-        '<div class="memory-meta"><span class="memory-tag ' + tagClass + '">' + tagLabel + '</span>' + (m.date || '') + '</div></div>' +
-        '<button class="memory-delete-btn" onclick="sara.deleteMemory(' + realIdx + ')"><i class="fas fa-times"></i></button></div>';
-    }).join('');
+    const container = $('memory-list-container'); updateMemoryCount();
+    if (!state.memories.length) { container.innerHTML = '<div class="memory-empty">No memories yet.</div>'; return; }
+    container.innerHTML = [...state.memories].reverse().map((m, i) => `<div class="memory-item"><div class="memory-text">${escHtml(m.text)}</div><button class="memory-delete-btn" onclick="sara.deleteMemory(${state.memories.length-1-i})">×</button></div>`).join('');
   }
+  function addMemory(text, type) { state.memories.push({ text, type: type||'info', date: new Date().toLocaleDateString() }); save(); updateMemoryCount(); }
+  function deleteMemory(idx) { state.memories.splice(idx,1); save(); renderMemoryList(); }
+  function updateMemoryCount() { if($('memory-count')) $('memory-count').textContent = state.memories.length; }
+  function getMemoryContext() { return state.memories.length ? '\n\n[MEMORIES]\n' + state.memories.slice(-10).map(m => m.text).join('\n') : ''; }
 
-  function deleteMemory(idx) { state.memories.splice(idx, 1); save(); renderMemoryList(); }
-  function clearAllMemory() {
-    if (!confirm('Sara ki saari memories clear kar dun? 🥺')) return;
-    state.memories = []; save(); renderMemoryList();
-  }
-  function addManualMemory() {
-    const text = document.getElementById('manual-memory-text').value.trim();
-    const type = document.getElementById('manual-memory-type').value;
-    if (!text) return;
-    addMemory(text, type);
-    document.getElementById('manual-memory-text').value = '';
-    renderMemoryList();
-  }
-  function updateMemoryCount() {
-    const badge = document.getElementById('memory-count');
-    if (badge) badge.textContent = (state.memories || []).length;
-  }
-  function addMemory(text, type) {
-    if (!state.memories) state.memories = [];
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
-    state.memories.push({ text, type: type || 'info', date: dateStr, ts: Date.now() });
-    save(); updateMemoryCount();
-  }
-  function getMemoryContext() {
-    if (!state.memories || state.memories.length === 0) return '';
-    const recent = state.memories.slice(-30);
-    const memText = recent.map(m => '[' + m.type.toUpperCase() + '] ' + m.text + ' (' + m.date + ')').join('\n');
-    return '\n\n[SARA MEMORY - Use naturally in conversation]\n' + memText;
-  }
-
-  // ===== GOALS SYSTEM =====
-  function openGoals() { renderGoalsList(); document.getElementById('goals-modal').classList.add('open'); closeSidebar(); }
-  function closeGoals() { document.getElementById('goals-modal').classList.remove('open'); }
+  function openGoals() { renderGoalsList(); $('goals-modal').classList.add('open'); closeSidebar(); }
+  function closeGoals() { $('goals-modal').classList.remove('open'); }
   function addGoal() {
-    const input = document.getElementById('new-goal-text');
-    const text = input.value.trim();
-    if (!text) return;
-    if (!state.goals) state.goals = [];
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short' });
-    state.goals.push({ id: Date.now().toString(), text, completed: false, date: dateStr, ts: Date.now() });
-    input.value = '';
-    save(); renderGoalsList(); updateGoalsCount();
+    const t = $('new-goal-text').value.trim(); if(!t) return;
+    state.goals.push({ id: Date.now().toString(), text: t, completed: false });
+    $('new-goal-text').value = ''; save(); renderGoalsList();
   }
-  function toggleGoal(id) {
-    const goal = state.goals.find(g => g.id === id);
-    if (goal) { goal.completed = !goal.completed; save(); renderGoalsList(); }
-  }
-  function deleteGoal(id) { state.goals = state.goals.filter(g => g.id !== id); save(); renderGoalsList(); updateGoalsCount(); }
-  function filterGoals(filter) {
-    state.goalsFilter = filter;
-    document.querySelectorAll('.goal-tab').forEach(tab => { tab.classList.toggle('active', tab.dataset.filter === filter); });
-    renderGoalsList();
-  }
+  function toggleGoal(id) { const g = state.goals.find(x=>x.id===id); if(g){ g.completed = !g.completed; save(); renderGoalsList(); } }
+  function deleteGoal(id) { state.goals = state.goals.filter(x=>x.id!==id); save(); renderGoalsList(); }
+  function updateGoalsCount() { if($('goals-count')) $('goals-count').textContent = state.goals.filter(x=>!x.completed).length; }
   function renderGoalsList() {
-    const container = document.getElementById('goals-list-container');
-    if (!container) return;
-    updateGoalsCount();
-    if (!state.goals || state.goals.length === 0) {
-      container.innerHTML = '<div class="goals-empty"><div class="goals-empty-icon">🎯</div><div>No goals yet</div></div>';
-      updateGoalsStats(); return;
-    }
-    let filtered = state.goals;
-    if (state.goalsFilter === 'pending') filtered = state.goals.filter(g => !g.completed);
-    else if (state.goalsFilter === 'completed') filtered = state.goals.filter(g => g.completed);
-    if (filtered.length === 0) {
-      container.innerHTML = '<div class="goals-empty"><div class="goals-empty-icon">✨</div><div>No ' + state.goalsFilter + ' goals</div></div>';
-      updateGoalsStats(); return;
-    }
-    const sorted = [...filtered].reverse();
-    container.innerHTML = sorted.map(g =>
-      '<div class="goal-item' + (g.completed ? ' completed' : '') + '">' +
-      '<div class="goal-checkbox' + (g.completed ? ' checked' : '') + '" onclick="sara.toggleGoal(\'' + g.id + '\')"></div>' +
-      '<div style="flex:1;"><div class="goal-text">' + escHtml(g.text) + '</div><div class="goal-date">' + g.date + '</div></div>' +
-      '<button class="goal-delete" onclick="sara.deleteGoal(\'' + g.id + '\')"><i class="fas fa-times"></i></button></div>'
-    ).join('');
-    updateGoalsStats();
+    const c = $('goals-list-container'); updateGoalsCount();
+    c.innerHTML = state.goals.length ? state.goals.map(g => `<div class="goal-item ${g.completed?'completed':''}"><div class="goal-checkbox ${g.completed?'checked':''}" onclick="sara.toggleGoal('${g.id}')"></div><div class="goal-text">${escHtml(g.text)}</div><button class="goal-delete" onclick="sara.deleteGoal('${g.id}')">×</button></div>`).join('') : '<div class="goals-empty">No goals.</div>';
   }
-  function updateGoalsStats() {
-    const statsEl = document.getElementById('goals-stats');
-    if (!statsEl || !state.goals) return;
-    const total = state.goals.length;
-    const completed = state.goals.filter(g => g.completed).length;
-    statsEl.textContent = total + ' total • ' + completed + ' done • ' + (total - completed) + ' pending';
-  }
-  function updateGoalsCount() {
-    const badge = document.getElementById('goals-count');
-    if (!badge || !state.goals) return;
-    badge.textContent = state.goals.filter(g => !g.completed).length;
-  }
-  function getGoalsContext() {
-    if (!state.goals || state.goals.length === 0) return '';
-    const pending = state.goals.filter(g => !g.completed);
-    if (pending.length === 0) return '';
-    const goalsText = pending.slice(0, 10).map((g, i) => (i+1) + '. ' + g.text).join('\n');
-    return '\n\n[SIR PENDING GOALS - Remind and motivate Sir about these]\n' + goalsText;
-  }
+  function getGoalsContext() { const p = state.goals.filter(x=>!x.completed); return p.length ? '\n\n[GOALS]\n' + p.map(x=>x.text).join('\n') : ''; }
 
-
-  // ===== VOICE SYSTEM =====
-  let currentUtterance = null;
-  let speakingMsgId = null;
-
-  function speakText(text, btnEl, msgId) {
-    // Stop if already speaking this message
-    if (speakingMsgId === msgId) {
-      window.speechSynthesis.cancel();
-      speakingMsgId = null;
-      if (btnEl) { btnEl.classList.remove('speaking'); btnEl.innerHTML = '<i class="fas fa-volume-up"></i> Listen'; }
-      return;
-    }
-    // Stop any previous speech
+  function speakText(text, btn, id) {
     window.speechSynthesis.cancel();
-    if (speakingMsgId) {
-      const prevBtn = document.querySelector('.voice-btn.speaking');
-      if (prevBtn) { prevBtn.classList.remove('speaking'); prevBtn.innerHTML = '<i class="fas fa-volume-up"></i> Listen'; }
-    }
-
-    // Clean text — remove markdown, code blocks, SARA_MEMORY lines
-    let clean = text
-      .split('\n').filter(l => !l.trim().startsWith('SARA_MEMORY:')).join(' ')
-      .replace(/```[\s\S]*?```/g, ' code block ')
-      .replace(/`[^`]+`/g, '')
-      .replace(/[#*_~>|\[\]]/g, '')
-      .replace(/https?:\/\/\S+/g, '')
-      .replace(/\s+/g, ' ').trim();
-
-    if (!clean) return;
-
-    currentUtterance = new SpeechSynthesisUtterance(clean);
-    currentUtterance.lang = 'hi-IN';
-    currentUtterance.rate = 0.95;
-    currentUtterance.pitch = 1.05;
-
-    // Use user selected voice or auto pick
+    const utterance = new SpeechSynthesisUtterance(text.replace(/SARA_MEMORY:.*$/gm, ''));
+    utterance.lang = 'hi-IN';
     const voices = window.speechSynthesis.getVoices();
-    let chosenVoice = null;
-    if (state.settings.selectedVoice) {
-      chosenVoice = voices.find(v => v.name === state.settings.selectedVoice) || null;
-    }
-    if (!chosenVoice) {
-      chosenVoice = voices.find(v => v.lang.startsWith('hi')) || voices.find(v => v.lang.startsWith('en-IN')) || null;
-    }
-    if (chosenVoice) currentUtterance.voice = chosenVoice;
-
-    speakingMsgId = msgId;
-    if (btnEl) { btnEl.classList.add('speaking'); btnEl.innerHTML = '<i class="fas fa-stop"></i> Stop'; }
-
-    currentUtterance.onend = () => {
-      speakingMsgId = null;
-      if (btnEl) { btnEl.classList.remove('speaking'); btnEl.innerHTML = '<i class="fas fa-volume-up"></i> Listen'; }
-    };
-    currentUtterance.onerror = () => {
-      speakingMsgId = null;
-      if (btnEl) { btnEl.classList.remove('speaking'); btnEl.innerHTML = '<i class="fas fa-volume-up"></i> Listen'; }
-    };
-
-    window.speechSynthesis.speak(currentUtterance);
+    const v = voices.find(x => x.name === state.settings.selectedVoice) || voices.find(x => x.lang.startsWith('hi'));
+    if (v) utterance.voice = v;
+    btn.classList.add('speaking');
+    utterance.onend = () => btn.classList.remove('speaking');
+    window.speechSynthesis.speak(utterance);
   }
 
-  return { init, toggleTheme, speakText, openSidebar, closeSidebar, openSettings, closeSettings, saveSettings, newChat, loadChat, deleteChat, renameChat, send, chipMsg, openMemory, closeMemory, deleteMemory, clearAllMemory, addManualMemory, openGoals, closeGoals, addGoal, toggleGoal, deleteGoal, filterGoals };
+  return { init, toggleTheme, openSidebar, closeSidebar, openSettings, closeSettings, saveSettings, newChat, loadChat, deleteChat, renameChat, send, chipMsg, openMemory, closeMemory, deleteMemory, addManualMemory: () => addMemory($('manual-memory-text').value, $('manual-memory-type').value), openGoals, closeGoals, addGoal, toggleGoal, deleteGoal, speakText };
 })();
 
 document.addEventListener('DOMContentLoaded', sara.init);
